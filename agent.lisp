@@ -112,8 +112,13 @@
    be delivered successfully an _error_ of _type_ {send-error} is
    signaled."
   (if (eq agent *agent*)
-      (error 'exit :reason reason)
-      (send `(:exit . ,reason) agent)))
+      ;; We are killing ourself: close our mailbox, then signal EXIT.
+      (progn (close-mailbox (agent-mailbox *agent*))
+             (error 'exit :reason reason))
+      ;; We are killing another agent: send kill message, then close
+      ;; agent's mailbox.
+      (progn (send `(:exit . ,reason) agent)
+             (close-mailbox (agent-mailbox agent)))))
 
 (defun receive ()
   "*Description*:

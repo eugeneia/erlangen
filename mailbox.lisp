@@ -8,13 +8,16 @@
            :enqueue-message
            :empty-p
            :dequeue-message
-           :mailbox-full))
+           :close-mailbox
+           :mailbox-full
+           :mailbox-closed))
 
 (in-package :erlangen.mailbox)
 
 (defstruct (mailbox (:constructor make-mailbox%))
   "Mailbox structure."
   (queue (error "QUEUE must be supplied.") :type bounded-fifo-queue)
+  (open? t :type symbol)
   (lock (make-lock))
   (enqueued (make-condition-variable))
   (dequeued (make-condition-variable)))
@@ -28,17 +31,26 @@
   (:documentation
    "Describes an error condition that can occur when calling
     ENQUEUE-MESSAGE. It denotes a that the user attempted to enqueue a
-    message into a full `mailbox'."))
+    message into a full MAILBOX."))
+
+(define-condition mailbox-closed (error) ()
+  (:documentation
+   "Describes an error condition that can occur when calling
+    ENQUEUE-MESSAGE. It denotes a that the user attempted to enqueue a
+    message into a closed MAILBOX."))
 
 (defun enqueue-message (message mailbox)
   "Attempt to enqueue MESSAGE in MAILBOX. If MAILBOX is full signal an
-error of type `mailbox-full'."
-  (with-slots (queue lock enqueued dequeued) mailbox
+error of type MAILBOX-FULL."
+  (with-slots (queue open? lock enqueued dequeued) mailbox
     (with-lock-held (lock)
-      (if (full? queue)
-          (error 'mailbox-full)
-          (progn (enqueue message queue)
-                 (condition-notify enqueued)))))
+      (cond ((not open?)
+             (error 'mailbox-closed))
+            ((full? queue)
+             (error 'mailbox-full))
+            (t
+             (enqueue message queue)
+             (condition-notify enqueued)))))
   (values))
 
 (defun empty-p (mailbox)
@@ -56,3 +68,8 @@ new message in enqueued."
             doing (condition-wait enqueued lock))
       (prog1 (dequeue queue)
         (condition-notify dequeued)))))
+
+(defun close-mailbox (mailbox)
+  "Close MAILBOX."
+  (with-lock-held ((mailbox-lock mailbox))
+    (setf (mailbox-open? mailbox) nil)))
