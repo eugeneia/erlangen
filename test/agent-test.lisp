@@ -4,7 +4,8 @@
   (:use :cl
         :erlangen.agent
         :erlangen.mailbox)
-  (:export :run-tests))
+  (:export :run-tests
+           :basic-message-benchmark))
 
 (in-package :erlangen.agent-test)
 
@@ -64,3 +65,44 @@
   (test-monitor-kill)
   (test-link)
   (test-send-error-killed))
+
+(defun ping-pong-bench (n-messages &optional (timeout 60))
+  (lambda ()
+    (let ((start (get-internal-real-time))
+          (n/2 (/ n-messages 2))
+          (incrementer (spawn (lambda ()
+                                (loop do
+                                     (destructuring-bind (a . i)
+                                         (receive)
+                                       (send (1+ i) a)))))))
+      (spawn (lambda ()
+               (send (cons (agent) 0) incrementer)
+               (loop for i = (receive) while (< i n/2)
+                  do (send (cons (agent) i) incrementer)))
+             :attach :monitor)
+      (unwind-protect
+           (destructuring-bind (spammer status result)
+               (receive-timeout timeout)
+             (declare (ignore spammer result))
+             (let ((seconds (/ (- (get-internal-real-time) start)
+                               internal-time-units-per-second)))
+               (assert (eq status :ok) nil "SPAMMER exited abnormally.")
+               seconds))
+        (exit :kill incrementer)))))
+
+(defun basic-message-benchmark (&key (n-messages 1e6)
+                                     (n-pairs 1)
+                                     (timeout 60))
+  (with-pseudo-agent (p)
+    (loop repeat n-pairs do
+         (spawn (ping-pong-bench n-messages timeout) :attach :monitor))
+    (let ((total-messages (* n-pairs n-messages))
+          (seconds (loop repeat n-pairs
+                      for (agent status seconds) = (receive)
+                      do (assert (eq status :ok) nil
+                                 "~a exited abnormally." agent)
+                      maximize seconds)))
+      (format t "Sent ~f million messages in ~f seconds.~%"
+              (/ total-messages 1e6) seconds)
+      (format t "Thats ~f messages per second.~%"
+              (/ total-messages seconds)))))
