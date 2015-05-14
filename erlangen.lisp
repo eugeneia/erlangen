@@ -5,7 +5,8 @@
    "Distributed asychronous message passing system for Common Lisp.")
   (:use :cl
         :erlangen.agent
-        :erlangen.registry)
+        :erlangen.registry
+        :erlangen.conditions)
   ;; Some symbols with generic definitions (local/registered/remote
   ;; agents) are redefined in this package and thus shadowed.
   (:shadow :send
@@ -19,6 +20,7 @@
            :send
            :send-error
            :receive
+           :timeout
            :exit
            :register
            :unregister

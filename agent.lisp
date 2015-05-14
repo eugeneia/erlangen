@@ -8,13 +8,15 @@
   without a blocking version of {send}.")
   (:use :cl
         :erlangen.mailbox
+        :erlangen.conditions
+        :erlangen.algorithms
         :bordeaux-threads)
+  (:shadowing-import-from :erlangen.conditions :timeout)
   (:export :agent
            :spawn
            :link
            :unlink
            :send
-           :send-error
            :receive
            :exit))
 
@@ -41,14 +43,6 @@
   "Lock AGENT for BODY."
   `(with-lock-held ((agent-lock ,agent))
      ,@body))
-
-(define-condition send-error (error) ()
-  (:documentation
-   "*Description:*
-
-    Describes an error condition that can occur when calling {send}. It
-    denotes a that {send} was unable to successfully deliver the message
-    to the recepient."))
 
 (define-condition exit (serious-condition)
   ((reason
@@ -116,7 +110,7 @@
    a _serious-condition_ of _type_ {exit} is signaled.
 
    If _timeout_ was supplied and is exceeded and _error_ of _type_
-   {simple-error} is signaled."
+   {timeout} is signaled."
   (check-type *agent* agent)
   (flet ((receive-message ()
            (let ((message (dequeue-message (agent-mailbox *agent*))))
@@ -124,12 +118,11 @@
                  (error 'exit :reason (cdr message))
                  message))))
     (if timeout
-        (loop for elapsed = 0 then (+ elapsed poll-interval) do
-             (when (> elapsed timeout)
-               (error "Timout in RECEIVE."))
-             (unless (empty-p (agent-mailbox *agent*))
-               (return-from receive (receive-message)))
-             (sleep poll-interval))
+        (with-poll-timeout ((not (empty-p (agent-mailbox *agent*)))
+                            :timeout timeout
+                            :poll-interval poll-interval)
+          :succeed (receive-message)
+          :fail (error 'timeout))
         (receive-message))))
 
 (defun make-agent-thread (function agent)

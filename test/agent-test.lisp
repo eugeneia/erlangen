@@ -3,6 +3,7 @@
 (defpackage erlangen.agent-test
   (:use :cl
         :erlangen.agent
+        :erlangen.conditions
         :erlangen.mailbox)
   (:export :run-tests
            :basic-message-benchmark))
@@ -19,7 +20,14 @@
   (with-pseudo-agent (p)
     (let ((relay (spawn (lambda () (send (receive) p)))))
       (spawn (lambda () (send :hello relay))))
-    (assert (eq :hello (receive :timeout 1)) nil "SEND/RECEIVE failed.")))
+    (assert (eq :hello (receive :timeout 1)) nil "SEND/RECEIVE failed.")
+    (let ((timeout (spawn (lambda () (receive :timeout 1/10))
+                          :attach :monitor)))
+      (destructuring-bind (agent exit . error) (receive :timeout 2/10)
+        (assert (and (eq agent timeout)
+                     (eq exit :exit)
+                     (typep error 'timeout))
+                nil "RECEIVE (timeout) misbehaves.")))))
 
 (defun test-monitor-kill ()
   (with-pseudo-agent (p)

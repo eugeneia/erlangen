@@ -5,9 +5,15 @@
   "Distributed asychronous message passing system for Common Lisp."
   :author "Max Rottenkolber <max@mr.gy>"
   :license "Not licensed"
-  :components ((:file "mailbox")
-               (:file "agent" :depends-on ("mailbox"))
-               (:file "registry" :depends-on ("agent"))
-               (:file "erlangen" :depends-on ("agent" "registry"))
-                ;; Tests
-               (:file "test/agent-test" :depends-on ("agent"))))
+  :components ((:file "conditions")
+               (:file "mailbox")
+               (:file "algorithms")
+               (:file "agent"
+                      :depends-on ("mailbox" "algorithms" "conditions"))
+               (:file "registry"
+                      :depends-on ("agent"))
+               (:file "erlangen"
+                      :depends-on ("agent" "registry" "conditions"))
+               ;; Tests
+               (:file "test/agent-test"
+                      :depends-on ("agent"))))
