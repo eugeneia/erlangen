@@ -105,7 +105,10 @@
    *Exceptional Situations:*
 
    If {link} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled."
+   {type-error} is signaled.
+
+   If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
+   is signaled."
   (etypecase agent
     (agent (erlangen.agent:link agent mode))
     (symbol (erlangen.agent:link (agent-by-name agent) mode))))
@@ -122,7 +125,10 @@
    *Exceptional Situations:*
 
    If {unlink} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled."
+   {type-error} is signaled.
+
+   If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
+   is signaled."
   (etypecase agent
     (agent (erlangen.agent:unlink agent))
     (symbol (erlangen.agent:unlink (agent-by-name agent)))))

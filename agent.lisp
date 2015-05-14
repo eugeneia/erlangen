@@ -179,15 +179,17 @@ FUNCTION."
 
 (defun link (agent mode)
   "Node-local LINK. See ERLANGEN:LINK for generic implementation."
+  (check-type *agent* agent)
+  (assert (not (eq agent *agent*)) () "Can not link to self.")
   (with-agent (agent)
-    (check-type *agent* agent)
     (ecase mode
       (:link    (pushnew *agent* (agent-links agent)))
       (:monitor (pushnew *agent* (agent-monitors agent))))))
 
 (defun unlink (agent)
   "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
+  (check-type *agent* agent)
+  (assert (not (eq agent *agent*)) () "Can not unlink from self.")
   (with-agent (agent)
-    (check-type *agent* agent)
     (setf #1=(agent-links agent)    (remove *agent* #1#)
           #2=(agent-monitors agent) (remove *agent* #2#))))
