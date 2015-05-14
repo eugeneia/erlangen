@@ -64,20 +64,7 @@
     reason"))
 
 (defun send (message agent)
-  "*Arguments and Values:*
-
-   _message_—an _object_.
-
-   _agent_—an _agent_.
-
-   *Description*:
-
-   {send} delivers _message_ to _agent_.
-
-   *Exceptional Situations:*
-
-   If the *message* could not be delivered successfully an _error_ of
-   _type_ {send-error} is signaled."
+  "Node-local SEND. See ERLANGEN:SEND for generic implementation."
   (handler-case (enqueue-message message (agent-mailbox agent))
     (error (error)
       (declare (ignore error))
@@ -95,22 +82,8 @@
       (loop for monitor in monitors do
            (ignore-errors (send `(,*agent* . ,reason) monitor))))))
 
-(defun exit (&optional (reason :kill) (agent *agent*))
-  "*Arguments and Values:*
-
-   _reason_—an _object_.
-
-   _agent_—an _agent_. Default is the _calling agent_.
-
-   *Description*:
-
-   {exit} kills _agent_ with _reason_ as the _exit reason_ of _agent_.
-
-   *Exceptional Situations:*
-
-   If _agent_ is not the _calling agent_ and the _kill message_ could not
-   be delivered successfully an _error_ of _type_ {send-error} is
-   signaled."
+(defun exit (reason agent)
+  "Node-local EXIT. See ERLANGEN:EXIT for generic implementation."
   (if (eq agent *agent*)
       ;; We are killing ourself: close our mailbox, then signal EXIT.
       (progn (close-mailbox (agent-mailbox *agent*))
@@ -211,45 +184,8 @@ FUNCTION."
                (make-agent function nil (list *agent*) mailbox-size))
     (otherwise (make-agent function nil nil mailbox-size))))
 
-(defun link (agent &optional (mode :link))
-  "*Arguments and Values:*
-
-   _agent_—an _agent_.
-
-   _mode_—a _keyword_. Either {:link} or {:monitor}. Defaults to {:link}.
-
-   *Description*:
-
-   {link} _links_ the _calling agent_ to _agent_.
-
-   When _agent_ exits and _mode_ is {:link} the _calling agent_ will be
-   killed with the _exit reason_ of _agent_.
-
-   When _agent_ exits and _mode_ is {:monitor} the _calling agent_ will
-   receive a message of the form
-
-   #code#
-   (<agent> . <exit-reason>)
-   #
-
-   where _exit-reason_ is the _exit reason_ of _agent_.
-
-   An _exit reason_ has the following from:
-
-   {(} _status_ {.} _values_ {)}
-
-   A _status_ of {:ok} means that the _agent_ exited normally and
-   _values_ will be a list of its _return values_.
-
-   A _status_ of {:exit} means that the _agent_ was either killed by
-   {exit} or aborted because of an unhandled _condition_ of _type_
-   {serious-condition} and _values_ will be the _reason_ supplied to
-   {exit} or the _condition object_.
-
-   *Exceptional Situations:*
-
-   If {link} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled."
+(defun link (agent mode)
+  "Node-local LINK. See ERLANGEN:LINK for generic implementation."
   (with-agent (agent)
     (check-type *agent* agent)
     (ecase mode
@@ -257,18 +193,7 @@ FUNCTION."
       (:monitor (pushnew *agent* (agent-monitors agent))))))
 
 (defun unlink (agent)
-  "*Arguments and Values:*
-
-   _agent_—an _agent_.
-
-   *Description:*
-
-   {unlink} removes any _links_ from _agent_ to the _calling agent_.
-
-   *Exceptional Situations:*
-
-   If {unlink} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled."
+  "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
   (with-agent (agent)
     (check-type *agent* agent)
     (setf #1=(agent-links agent)    (remove *agent* #1#)
