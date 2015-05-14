@@ -78,6 +78,9 @@
 
    {link} _links_ the _calling agent_ to _agent_.
 
+   When the _calling agent_ exits _agent_ will be killed with the _exit
+   reason_ of the _calling agent_.
+
    When _agent_ exits and _mode_ is {:link} the _calling agent_ will be
    killed with the _exit reason_ of _agent_.
 

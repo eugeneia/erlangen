@@ -150,6 +150,19 @@ FUNCTION."
     (make-agent-thread function agent)
     agent))
 
+(defun spawn-attached (mode function mailbox-size)
+  "Spawn agent with MAILBOX-SIZE that will execute FUNCTION attached to
+the calling agent in MODE."
+  (let ((agent
+         (ecase mode
+           (:link
+            (make-agent function (list *agent*) nil mailbox-size))
+           (:monitor
+            (make-agent function nil (list *agent*) mailbox-size)))))
+    (with-agent (*agent*)
+      (push agent (agent-links *agent*)))
+    agent))
+
 (defun spawn (function &key attach (mailbox-size 64))
   "*Arguments and Values:*
 
@@ -172,24 +185,28 @@ FUNCTION."
    _agent_ an _error_ of _type_ {type-error} is signaled."
   (case attach
     (:link     (check-type *agent* agent)
-               (make-agent function (list *agent*) nil mailbox-size))
+               (spawn-attached :link function mailbox-size))
     (:monitor  (check-type *agent* agent)
-               (make-agent function nil (list *agent*) mailbox-size))
+               (spawn-attached :monitor function mailbox-size))
     (otherwise (make-agent function nil nil mailbox-size))))
 
 (defun link (agent mode)
   "Node-local LINK. See ERLANGEN:LINK for generic implementation."
   (check-type *agent* agent)
-  (assert (not (eq agent *agent*)) () "Can not link to self.")
+  (when (eq agent *agent*)
+    (error "Can not link to self."))
   (with-agent (agent)
     (ecase mode
       (:link    (pushnew *agent* (agent-links agent)))
-      (:monitor (pushnew *agent* (agent-monitors agent))))))
+      (:monitor (pushnew *agent* (agent-monitors agent)))))
+  (with-agent (*agent*)
+    (pushnew agent (agent-links *agent*))))
 
 (defun unlink (agent)
   "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
   (check-type *agent* agent)
-  (assert (not (eq agent *agent*)) () "Can not unlink from self.")
+  (when (eq agent *agent*)
+    (error "Can not unlink from self."))
   (with-agent (agent)
     (setf #1=(agent-links agent)    (remove *agent* #1#)
           #2=(agent-monitors agent) (remove *agent* #2#))))
