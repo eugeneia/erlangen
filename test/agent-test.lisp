@@ -9,14 +9,6 @@
 
 (in-package :erlangen.agent-test)
 
-(defun receive-timeout (&optional (seconds 1) (interval 1/10))
-  (flet ((message-available-p ()
-           (not (empty-p (erlangen.agent::agent-mailbox (agent))))))
-    (loop repeat (/ seconds interval)
-       if (message-available-p) do (return-from receive-timeout (receive))
-       else do (sleep interval)))
-  (error "Timeout in RECEIVE-TIMEOUT."))
-
 (defmacro with-pseudo-agent ((var &key (mailbox-size 64)) &body body)
   `(let* ((,var (erlangen.agent::make-agent%
                  :mailbox (make-mailbox ,mailbox-size)))
@@ -27,13 +19,13 @@
   (with-pseudo-agent (p)
     (let ((relay (spawn (lambda () (send (receive) p)))))
       (spawn (lambda () (send :hello relay))))
-    (assert (eq :hello (receive-timeout)) nil "SEND/RECEIVE failed.")))
+    (assert (eq :hello (receive :timeout 1)) nil "SEND/RECEIVE failed.")))
 
 (defun test-monitor-kill ()
   (with-pseudo-agent (p)
     (let ((monitored (spawn (lambda () (receive)) :attach :monitor)))
       (exit :kill monitored)
-      (assert (equal `(,monitored :exit . :kill) (receive-timeout)) nil
+      (assert (equal `(,monitored :exit . :kill) (receive :timeout 1)) nil
               "Monitor received corrupted message."))))
 
 (defun test-link ()
@@ -42,7 +34,7 @@
                            (spawn (lambda () (+ 1 2 3)) :attach :link)
                            (receive))
                          :attach :monitor)))
-      (assert (equal `(,parent :exit :ok 6) (receive-timeout)) nil
+      (assert (equal `(,parent :exit :ok 6) (receive :timeout 1)) nil
               "Monitor received corrupt message."))))
 
 (defun test-send-error-killed ()
@@ -82,7 +74,7 @@
              :attach :monitor)
       (unwind-protect
            (destructuring-bind (spammer status result)
-               (receive-timeout timeout)
+               (receive :timeout timeout)
              (declare (ignore spammer result))
              (let ((seconds (/ (- (get-internal-real-time) start)
                                internal-time-units-per-second)))

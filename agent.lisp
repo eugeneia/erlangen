@@ -120,12 +120,19 @@
       (progn (send `(:exit . ,reason) agent)
              (close-mailbox (agent-mailbox agent)))))
 
-(defun receive ()
-  "*Description*:
+(defun receive (&key timeout (poll-interval 1e-3))
+  "*Arguments and Values:*
+
+   _timeout_, _poll-interval_—positive _numbers_.
+
+   *Description*:
 
    {receive} returns the next message for the _calling agent_. If the
    _mailbox_ of the _calling agent_ is empty, {receive} will block until
    a message arrives.
+
+   If _timeout_ is supplied {receive} will block for at most _timeout_
+   seconds and poll for a message every _poll-interval_ seconds.
 
    *Exceptional Situations:*
 
@@ -133,12 +140,24 @@
    {type-error} is signaled.
 
    If the _calling agent_ was killed by another _agent_ by use of {exit}
-   a _serious-condition_ of _type_ {exit} is signaled."
+   a _serious-condition_ of _type_ {exit} is signaled.
+
+   If _timeout_ was supplied and is exceeded and _error_ of _type_
+   {simple-error} is signaled."
   (check-type *agent* agent)
-  (let ((message (dequeue-message (agent-mailbox *agent*))))
-    (if (and (consp message) (eq :exit (car message)))
-        (error 'exit :reason (cdr message))
-        message)))
+  (flet ((receive-message ()
+           (let ((message (dequeue-message (agent-mailbox *agent*))))
+             (if (and (consp message) (eq :exit (car message)))
+                 (error 'exit :reason (cdr message))
+                 message))))
+    (if timeout
+        (loop for elapsed = 0 then (+ elapsed poll-interval) do
+             (when (> elapsed timeout)
+               (error "Timout in RECEIVE."))
+             (unless (empty-p (agent-mailbox *agent*))
+               (return-from receive (receive-message)))
+             (sleep poll-interval))
+        (receive-message))))
 
 (defun make-agent-thread (function agent)
   "Spawn thread for FUNCTION with *AGENT* bound to AGENT."
