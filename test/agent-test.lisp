@@ -64,7 +64,8 @@
   (test-send-receive)
   (test-monitor-kill)
   (test-link)
-  (test-send-error-killed))
+  (test-send-error-killed)
+  :ok)
 
 (defun ping-pong-bench (n-messages &optional (timeout 60))
   (lambda ()
