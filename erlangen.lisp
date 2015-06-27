@@ -87,9 +87,7 @@
    When _agent_ exits and _mode_ is {:monitor} the _calling agent_ will
    receive a message of the form
 
-   #code#
-   (<agent> . <exit-reason>)
-   #
+   {(} _agent_ {.} _exit-reason_ {)}
 
    where _exit-reason_ is the _exit reason_ of _agent_.
 
