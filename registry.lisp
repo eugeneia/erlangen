@@ -17,12 +17,12 @@
 
 (defvar *registry-lock* (make-lock "erlangen.registry"))
 
-(defun register (name agent)
+(defun register (name &optional (agent (agent)))
   "*Arguments and Values:*
 
    _name_—a _keyword_.
 
-   _agent_—an _agent_.
+   _agent_—an _agent_. Default is the _calling agent_.
 
    *Description*:
 
