@@ -12,18 +12,32 @@
 (defun reader-symbol (symbol)
   (intern (format nil "READ-~a" (symbol-name symbol)) :nodes.9p))
 
-(defun compile-write-integer (size)
-  `(write-bytes datum ,size stream))
+(defun assert-size (name type size bytes)
+  (unless (< size (expt 2 (* 8 bytes)))
+    (error 'type-error
+           :format-control "~a does not fit type ~a."
+           :datum name
+           :expected-type type)))
 
-(defun compile-9p-string-writer (bytes)
+(defun compile-write-integer (name type size)
   `(progn
+     ;; Assert that DATUM fits into SIZE bytes.
+     (assert-size ',name ',type datum ,size)
+     (write-bytes datum ,size stream)))
+
+(defun compile-9p-string-writer (name type bytes)
+  `(progn
+     ;; Assert that (length DATUM) fits into BYTES.
+     (assert-size ',name ',type (length datum) ,bytes)
      ;; size[bytes]
      (write-bytes (length datum) ,bytes stream)
      ;; string
      (write-sequence datum stream)))
 
-(defun compile-write-vector (element-type)
+(defun compile-write-vector (name type element-type)
   `(progn
+     ;; Assert that (length DATUM) fits into 2 bytes.
+     (assert-size ',name ',type (length datum) 2)
      ;; s[2]
      (write-bytes (length datum) 2 stream)
      (loop for element in datum do
@@ -36,7 +50,7 @@
   `(let* (; Read size[bytes]
           (size (read-bytes stream ,bytes))
           (buffer (make-array size :element-type '(unsigned-byte 8))))
-     (unless (> (read-sequence buffer stream) size)
+     (unless (= (read-sequence buffer stream) size)
        (error 'end-of-file :stream stream))
      buffer))
 
@@ -54,9 +68,9 @@
      ;; Writer
      (defun ,(writer-symbol name) (datum stream)
        ,(ecase type
-          (integer (compile-write-integer    spec))
-          (string  (compile-9p-string-writer spec))
-          (vector  (compile-write-vector     spec)))
+          (integer (compile-write-integer    name type spec))
+          (string  (compile-9p-string-writer name type spec))
+          (vector  (compile-write-vector     name type spec)))
        (values))
      ;; Reader
      (defun ,(reader-symbol name) (stream)
@@ -82,45 +96,18 @@
 (define-datum string  stat      2)
 
 
-(defparameter *message-types*
-  '((version-request . 100)
-    (version-reply   . 101)
-    (auth-request    . 102)
-    (auth-reply      . 103)
-    (attach-request  . 104)
-    (attach-reply    . 105)
-    (error-reply     . 107)
-    (fluch-request   . 108)
-    (flush-reply     . 109)
-    (walk-request    . 110)
-    (walk-reply      . 111)
-    (open-request    . 112)
-    (open-reply      . 113)
-    (create-request  . 114)
-    (create-reply    . 115)
-    (read-request    . 116)
-    (read-reply      . 117)
-    (write-request   . 118)
-    (write-reply     . 119)
-    (clunk-request   . 120)
-    (clunk-reply     . 121)
-    (remove-request  . 122)
-    (remove-reply    . 123)
-    (stat-request    . 124)
-    (stat-reply      . 125)
-    (wstat-request   . 126)
-    (wstat-reply     . 127))
-  "Message symbol to integer mapping.")
-
-(defparameter *message-table*
-  (make-hash-table :test 'eql :size (length *message-types*))
-  "Lookup table for integer=>symbol.")
-
 (defvar *message-size* nil
   "Set to `msize' during `session'.")
 
+(defparameter *message-table*
+  (make-hash-table :test 'eql)
+  "Lookup table for integer=>symbol.")
+
 (defun message-type (name)
   (get name :message-type))
+
+(defun type-symbol (type)
+  (gethash type *message-table*))
 
 (defun compile-compute-9p-string-size (name type)
   `(+ ,(get type :datum-spec) (length ,name)))
@@ -130,10 +117,9 @@
       ,(let ((subdatum (get type :datum-spec)))
             (ecase (get subdatum :datum-type)
               (integer `(* ,(get subdatum :datum-spec) (length ,name)))
-              (string  `(+ ,(get subdatum :datum-spec)
-                           (loop for element in ,name sum
-                                ,(compile-compute-9p-string-size
-                                  'element subdatum))))))))
+              (string  `(loop for element in ,name sum
+                             ,(compile-compute-9p-string-size
+                               'element subdatum)))))))
 
 (defun compile-compute-size (fields)
   `(+ ,(get 'size :datum-spec)
@@ -165,99 +151,111 @@
     (let ((size (read-size stream)))
       (assert-message-size size)
       (values
-       (gethash (read-type stream) *message-table*)
-       (let ((buffer (make-array size :element-type '(unsigned-byte 8))))
-         (unless (> (read-sequence buffer stream) (- size header-size))
+       (type-symbol (read-type stream))
+       (let* ((buffer-size (- size header-size))
+              (buffer (make-array buffer-size
+                                  :element-type '(unsigned-byte 8))))
+         (unless (= (read-sequence buffer stream) buffer-size)
            (error 'end-of-file :stream stream))
          buffer)))))
 
-(defun compile-read-message (name fields)
-  `(values (read-tag stream)
-           ,@(loop for (name type) in fields collect
-                  `(,(reader-symbol type) stream))))
+(defun compile-read-message (fields)
+  `(with-input-from-sequence (stream buffer)
+     (values (read-tag stream)
+             ,@(loop for type in (mapcar 'second fields) collect
+                    `(,(reader-symbol type) stream)))))
 
-(defmacro define-message (name &rest fields)
+(defmacro define-message (type name &rest fields)
+  (setf (get name :message-type) type
+        (gethash type *message-table*) name)
   `(progn
-     (defun ,(writer-symbol name) (tag ,@(mapcar #'car fields) stream)
+     (defun ,(writer-symbol name) (tag ,@(mapcar 'first fields) stream)
        ,(compile-write-message name fields))
-     (defun ,(reader-symbol name) (stream)
-       ,(compile-read-message name fields))
+     (defun ,(reader-symbol name) (buffer)
+       ,(compile-read-message fields))
      (values)))
 
 
-;; Define messages.
-(eval-when (:compile-toplevel)
-  (loop for (name . type) in *message-types*
-     do (setf (get name :message-type) type
-              (gethash type *message-table*) name)))
-
 ;; Tversion msize[4] version[s]
 ;; Rversion msize[4] version[s]
-(define-message version-request (msize size) (version name))
-(define-message version-reply   (msize size) (version name))
+(define-message 100 version-request (msize size) (version name))
+(define-message 101 version-reply   (msize size) (version name))
 
 ;; Tauth afid[4] uname[s] aname[s]
 ;; Rauth aqid[13]
-(define-message auth-request (afid fid) (uname name) (aname name))
-(define-message auth-reply   (aqid qid))
-
-;; Rerror ename[s]
-(define-message error-reply (ename name))
-
-;; Tflush oldtag[2]
-;; Rflush
-(define-message flush-request (oldtag tag))
-(define-message flush-reply)
+(define-message 102 auth-request (afid fid) (uname name) (aname name))
+(define-message 103 auth-reply (aqid qid))
 
 ;; Tattach fid[4] afid[4] uname[s] aname[s]
 ;; Rattach qid[13]
-(define-message attach-request (fid fid) (afid fid) (uname name) (aname name))
-(define-message attach-reply   (qid qid))
+(define-message 104 attach-request (fid fid) (afid fid) (uname name) (aname name))
+(define-message 105 attach-reply   (qid qid))
+
+;; Rerror ename[s]
+(define-message 107 error-reply (ename name))
+
+;; Tflush oldtag[2]
+;; Rflush
+(define-message 108 flush-request (oldtag tag))
+(define-message 109 flush-reply)
+
 
 ;; Twalk fid[4] newfid[4] nwname[2] nwname*(wname[s])
 ;; Rwalk nwqid[2] nwqid*(wqid[13])
-(define-message walk-request (fid fid) (newfid fid) (names names))
-(define-message walk-request (qids qids))
+(define-message 110 walk-request (fid fid) (newfid fid) (names names))
+(define-message 111 walk-reply (qids qids))
 
 ;; Topen fid[4] mode[1]
 ;; Ropen qid[13] iounit[4]
-(define-message open-request (fid fid) (mode mode))
-(define-message open-request (qid qid) (iounit size))
+(define-message 112 open-request (fid fid) (mode mode))
+(define-message 113 open-reply (qid qid) (iounit size))
 
 ;; Tcreate fid[4] name[s] perm[4] mode[1]
 ;; Rcreate qid[13] iounit[4]
-(define-message create-request (fid fid) (name name) (perm perm) (mode mode))
-(define-message create-reply   (qid qid) (iounit size))
+(define-message 114 create-request (fid fid) (name name) (perm perm) (mode mode))
+(define-message 115 create-reply   (qid qid) (iounit size))
 
 ;; Tread fid[4] offset[8] count[4]
 ;; Rread count[4] data[count]
-(define-message read-request (fid fid) (offset offset) (count size))
-(define-message read-reply   (data data))
+(define-message 116 read-request (fid fid) (offset offset) (count size))
+(define-message 117 read-reply   (data data))
 
 ;; Twrite fid[4] offset[8] count[4] data[count]
 ;; Rwrite count[4]
-(define-message write-request (fid fid) (offset offset) (data data))
-(define-message write-reply   (count size))
+(define-message 118 write-request (fid fid) (offset offset) (data data))
+(define-message 119 write-reply   (count size))
 
 ;; Tclunk fid[4]
 ;; Rclunk
-(define-message clunk-request (fid fid))
-(define-message clunk-reply)
+(define-message 120 clunk-request (fid fid))
+(define-message 121 clunk-reply)
 
 ;; Tremove fid[4]
 ;; Rremove
-(define-message remove-request (fid fid))
-(define-message remove-reply)
+(define-message 122 remove-request (fid fid))
+(define-message 123 remove-reply)
 
 ;; Tstat fid[4]
 ;; Rstat stat[n]
-(define-message stat-request (fid fid))
-(define-message stat-reply   (stat stat))
+(define-message 124 stat-request (fid fid))
+(define-message 125 stat-reply   (stat stat))
 
 ;; Twstat fid[4] stat[n]
 ;; Rwstat
-(define-message wstat-request (fid fid) (stat stat))
-(define-message wstat-reply)
+(define-message 126 wstat-request (fid fid) (stat stat))
+(define-message 127 wstat-reply)
+
+
+;;; Usage:
+#|(setf *message-size* 128)
+
+(let* ((message (with-output-to-sequence (stream)
+                  (write-walk-reply #xffff '(#x04 #x05) stream))))
+  (multiple-value-bind (type buffer)
+      (with-input-from-sequence (stream message) (read-message stream))
+    (print type)
+    (read-walk-reply buffer)))
+|#
 
 
 ;;; Imaginary client interface:
