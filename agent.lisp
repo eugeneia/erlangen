@@ -18,12 +18,23 @@
            :unlink
            :send
            :receive
-           :exit))
+           :exit
+           :*agent-debug*))
 
 (in-package :erlangen.agent)
 
 (defvar *agent* nil
   "Bound to current agent.")
+
+(defparameter *agent-debug* nil
+  "*Description:*
+
+   If {*agent-debug*} is _true_ when calling {spawn} _conditions_ of
+   _type_ {serious-condition} will not be automatically handled for the
+   spawned _agent_. The debugger will be entered so that the call stack
+   can be inspected. Invoking the {exit} _restart_ will resume normal
+   operation except that the exit reason will be the _agent_ instead of
+   the fatal _condition_.")
 
 (defun agent ()
   "Return calling agent."
@@ -125,20 +136,46 @@
           :fail (error 'timeout))
         (receive-message))))
 
+(defun make-agent-function (function agent)
+  "Wrap FUNCTION in ordered shutdown forms for AGENT."
+  (let ((debug-p *agent-debug*))
+    (flet ((run-agent ()
+             (handler-case (funcall function)
+               ;; Agent exits normally.
+               (:no-error (&rest values)
+                 (agent-notify-exit `(:ok . ,values)))
+               ;; Agent is killed with reason.
+               (exit (exit)
+                 (agent-notify-exit `(:exit . ,(exit-reason exit))))))
+           ;; Handler for when agent signals a SERIOUS-CONDITION.
+           (handle-agent-error (condition)
+             ;; Unless DEBUG-P is true the EXIT restart
+             ;; is invoked automatically.
+             (unless debug-p
+               (invoke-restart 'exit condition)))
+           ;; Report and interactive functions for EXIT restart.
+           (exit-report (stream) (format stream "Exit ~a." *agent*))
+           (exit-interactive () `(,agent)))
+      (lambda ()
+        ;; Pass on relevant dynamic variables to child agent.
+        (let ((*agent* agent)
+              (*agent-debug* debug-p))
+          ;; We run agent and set up restarts and handlers for its
+          ;; failure modes. RUN-AGENT handles normal exits itself. If
+          ;; agent signals a SERIOUS-CONDITION however, the failure is
+          ;; handled seperately (and possibly interactively, if
+          ;; *AGENT-DEBUG* is true).
+          (restart-case
+              (handler-bind ((serious-condition #'handle-agent-error))
+                (run-agent))
+            ;; Restart for when agent signals a SERIOUS-CONDITION.
+            (exit (condition)
+              :report exit-report :interactive exit-interactive
+              (agent-notify-exit `(:exit . ,condition)))))))))
+
 (defun make-agent-thread (function agent)
   "Spawn thread for FUNCTION with *AGENT* bound to AGENT."
-  (make-thread (lambda ()
-                 (let ((*agent* agent))
-                   (handler-case (funcall function)
-                     ;; Agent exits normally.
-                     (:no-error (&rest values)
-                       (agent-notify-exit `(:ok . ,values)))
-                     ;; Agent is killed with reason.
-                     (exit (exit)
-                       (agent-notify-exit `(:exit . ,(exit-reason exit))))
-                     ;; Agent exits due to SERIOUS-CONDITION.
-                     (serious-condition (condition)
-                       (agent-notify-exit `(:exit . ,condition))))))
+  (make-thread (make-agent-function function agent)
                :name "erlangen.agent"))
 
 (defun make-agent (function links monitors mailbox-size)

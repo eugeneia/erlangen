@@ -24,7 +24,8 @@
            :exit
            :register
            :unregister
-           :registered))
+           :registered
+           :*agent-debug*))
      
 (in-package :erlangen)
 
