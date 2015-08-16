@@ -211,25 +211,7 @@ the calling agent in MODE."
     agent))
 
 (defun spawn (function &key attach (mailbox-size *default-mailbox-size*))
-  "*Arguments and Values:*
-
-   _function_—a _function_.
-
-   _attach_—a _keyword_ or {nil}.
-
-   _mailbox-size_—a positive _unsigned integer_.
-
-   *Description:*
-
-   {spawn} starts and returns a new _agent_ with a mailbox capacity of
-   _mailbox-size_. If _attach_ is {:link} or {:monitor} the _calling
-   agent_ will be linked to the new _agent_ as if by {link} but before
-   the _agent_ is started.
-
-   *Exceptional Situations:*
-
-   If _attach_ is {:link} or {:monitor} and {spawn} was not called by an
-   _agent_ an _error_ of _type_ {type-error} is signaled."
+  "Node-local SPAWN. See ERLANGEN:SPAWN for generic implementation."
   (case attach
     (:link     (check-type *agent* agent)
                (spawn-attached :link function mailbox-size))

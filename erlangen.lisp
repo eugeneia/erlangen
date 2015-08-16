@@ -6,15 +6,18 @@
   (:use :cl
         :erlangen.agent
         :erlangen.registry
-        :erlangen.conditions)
+        :erlangen.conditions
+        :erlangen.call)
   ;; Some symbols with generic definitions (local/registered/remote
   ;; agents) are redefined in this package and thus shadowed.
   (:shadow :send
            :exit
            :link
-           :unlink)
+           :unlink
+           :spawn)
   (:export :agent
            :spawn
+           :call
            :link
            :unlink
            :send
@@ -68,6 +71,34 @@
   (etypecase agent
     (agent (erlangen.agent:exit reason agent))
     (symbol (erlangen.agent:exit reason (agent-by-name agent)))))
+
+(defun spawn (function &key attach (mailbox-size *default-mailbox-size*))
+  "*Arguments and Values:*
+
+   _function_—a _function designator_ or a _call_.
+
+   _attach_—a _keyword_ or {nil}.
+
+   _mailbox-size_—a positive _unsigned integer_. The default is
+   {*default-mailbox-size*}.
+
+   *Description:*
+
+   {spawn} starts and returns a new _agent_ with a mailbox capacity of
+   _mailbox-size_. If _attach_ is {:link} or {:monitor} the _calling
+   agent_ will be linked to the new _agent_ as if by {link} but before
+   the _agent_ is started. Once the _agent_ is started it will execute
+   _function_.
+
+   *Exceptional Situations:*
+
+   If _attach_ is {:link} or {:monitor} and {spawn} was not called by an
+   _agent_ an _error_ of _type_ {type-error} is signaled."
+  (erlangen.agent:spawn (etypecase function
+                          (function function)
+                          (call (make-function function)))
+                        :attach attach
+                        :mailbox-size mailbox-size))
 
 (defun link (agent &optional (mode :link))
   "*Arguments and Values:*
