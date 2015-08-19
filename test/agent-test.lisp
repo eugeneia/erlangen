@@ -10,7 +10,9 @@
 
 (in-package :erlangen.agent-test)
 
-(defmacro with-pseudo-agent ((var &key (mailbox-size 64)) &body body)
+(defmacro with-pseudo-agent ((var &key (mailbox-size
+                                        '*default-mailbox-size*))
+                             &body body)
   `(let* ((,var (erlangen.agent::make-agent%
                  :mailbox (make-mailbox ,mailbox-size)))
           (erlangen.agent::*agent* ,var))

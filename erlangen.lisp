@@ -25,6 +25,7 @@
            :register
            :unregister
            :registered
+           :*default-mailbox-size*
            :*agent-debug*))
      
 (in-package :erlangen)

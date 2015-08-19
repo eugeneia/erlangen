@@ -19,12 +19,19 @@
            :send
            :receive
            :exit
+           :*default-mailbox-size*
            :*agent-debug*))
 
 (in-package :erlangen.agent)
 
 (defvar *agent* nil
   "Bound to current agent.")
+
+(defvar *default-mailbox-size* 64
+  "*Description:*
+
+   {*default-mailbox-size*} is the default value of the {:mailbox-size}
+   parameter to {spawn}.")
 
 (defparameter *agent-debug* nil
   "*Description:*
@@ -138,7 +145,8 @@
 
 (defun make-agent-function (function agent)
   "Wrap FUNCTION in ordered shutdown forms for AGENT."
-  (let ((debug-p *agent-debug*))
+  (let ((default-mailbox-size *default-mailbox-size*)
+        (debug-p *agent-debug*))
     (flet ((run-agent ()
              (handler-case (funcall function)
                ;; Agent exits normally.
@@ -159,6 +167,7 @@
       (lambda ()
         ;; Pass on relevant dynamic variables to child agent.
         (let ((*agent* agent)
+              (*default-mailbox-size* default-mailbox-size)
               (*agent-debug* debug-p))
           ;; We run agent and set up restarts and handlers for its
           ;; failure modes. RUN-AGENT handles normal exits itself. If
@@ -200,7 +209,7 @@ the calling agent in MODE."
       (push agent (agent-links *agent*)))
     agent))
 
-(defun spawn (function &key attach (mailbox-size 64))
+(defun spawn (function &key attach (mailbox-size *default-mailbox-size*))
   "*Arguments and Values:*
 
    _function_—a _function_.
