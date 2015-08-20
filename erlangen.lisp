@@ -123,7 +123,7 @@
 
    *Description:*
 
-   {unlink} removes any _links_ from _agent_ to the _calling agent_.
+   {unlink} removes any _link_ between _agent_ and the _calling agent_.
 
    *Exceptional Situations:*
 

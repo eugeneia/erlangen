@@ -255,4 +255,7 @@ the calling agent in MODE."
     (error "Can not unlink from self."))
   (with-agent (agent)
     (setf #1=(agent-links agent)    (remove *agent* #1#)
-          #2=(agent-monitors agent) (remove *agent* #2#))))
+          #2=(agent-monitors agent) (remove *agent* #2#)))
+  (with-agent (*agent*)
+    (setf #3=(agent-links *agent*)    (remove agent #3#)
+          #4=(agent-monitors *agent*) (remove agent #4#))))
