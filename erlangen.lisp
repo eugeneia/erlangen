@@ -78,16 +78,19 @@
 
    *Description*:
 
-   {link} _links_ the _calling agent_ to _agent_.
+   {link} _links_ the _calling agent_ to _agent_. After two _agents_ are
+   _linked_ they behave as follows:
 
-   When the _calling agent_ exits _agent_ will be killed with the _exit
-   reason_ of the _calling agent_.
+   When the _calling agent_ exits it will attempt to kill _agent_ with
+   the _exit reason_ of the _calling agent_.
 
-   When _agent_ exits and _mode_ is {:link} the _calling agent_ will be
-   killed with the _exit reason_ of _agent_.
+   When _agent_ exits and _mode_ is {:link} it will attempt to kill
+   _calling agent_ with the _exit reason_ of _agent_.
 
-   When _agent_ exits and _mode_ is {:monitor} the _calling agent_ will
-   receive a message of the form
+   When _agent_ exits and _mode_ is {:monitor} it will attempt to send an
+   _exit notification_ to the _calling agent_.
+
+   An _exit notification_ is of the form
 
    {(} _agent_ {.} _exit-reason_ {)}
 
@@ -104,6 +107,11 @@
    {exit} or aborted because of an unhandled _condition_ of _type_
    {serious-condition} and _values_ will be the _reason_ supplied to
    {exit} or the _condition object_.
+
+   The attempts to kill or notify _linked agents_ will fail if the
+   respective message can not be delivered to the target _agent_. Any
+   error conditions that arise due to the failure will be silently
+   ignored.
 
    *Exceptional Situations:*
 
