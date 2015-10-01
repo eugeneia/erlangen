@@ -13,6 +13,7 @@
                (:file "registry"
                       :depends-on ("agent"))
                (:file "distribution/call")
+               (:file "distribution/protocol/buffers")
                (:file "erlangen"
                       :depends-on ("agent"
                                    "registry"
@@ -22,4 +23,7 @@
                (:file "test/agent-test"
                       :depends-on ("agent")))
   :depends-on ("jpl-queues"
-               "bordeaux-threads"))
+               "bordeaux-threads"
+               "trivial-utf-8"
+               "fast-io"
+               "cl-conspack"))
