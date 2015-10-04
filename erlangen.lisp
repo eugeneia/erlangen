@@ -7,6 +7,7 @@
         :erlangen.agent
         :erlangen.registry
         :erlangen.conditions
+        :erlangen.macros
         :erlangen.call)
   ;; Some symbols with generic definitions (local/registered/remote
   ;; agents) are redefined in this package and thus shadowed.
@@ -28,6 +29,7 @@
            :register
            :unregister
            :registered
+           :select
            :*default-mailbox-size*
            :*agent-debug*))
      

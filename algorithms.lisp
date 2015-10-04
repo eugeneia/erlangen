@@ -3,7 +3,8 @@
 (defpackage erlangen.algorithms
   (:documentation "Reusable algorithms.")
   (:use :cl)
-  (:export :with-poll-timeout))
+  (:export :with-poll-timeout
+           :with-poll-select))
 
 (in-package :erlangen.algorithms)
 
@@ -29,3 +30,21 @@ FAIL."
   `(poll-timeout% (lambda () ,predicate-form) ,timeout ,poll-interval
                   (lambda () ,succeed)
                   (lambda () ,fail)))
+
+(defmacro with-poll-select (poll-interval &rest clauses)
+  "CLAUSE::= (POLL-FORM (&rest VARS) &body body)
+
+Poll every POLL-INTERVAL seconds until a CLAUSE's POLL-FORM returns true
+as its first value. Evaluate the CLAUSE's BODY with VARS bound to
+POLL-FORM's return values and return. If a CLAUSE's VARS are nil (empty),
+the clause will repeatedly be polled but never cause a return and its
+BODY will never be evaluated."
+  `(block select
+     (loop do
+          ,@(loop for clause in clauses collect
+                 (destructuring-bind (form &optional vars &rest body)
+                     clause
+                   `(multiple-value-bind ,vars ,form
+                      (when ,(first vars)
+                        (return-from select (progn ,@body))))))
+          (sleep ,poll-interval))))

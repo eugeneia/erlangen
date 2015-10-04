@@ -12,12 +12,15 @@
                       :depends-on ("mailbox" "algorithms" "conditions"))
                (:file "registry"
                       :depends-on ("agent"))
+               (:file "macros"
+                      :depends-on ("algorithms"))
                (:file "distribution/call")
                (:file "distribution/protocol/buffers")
                (:file "erlangen"
                       :depends-on ("agent"
                                    "registry"
                                    "conditions"
+                                   "macros"
                                    "distribution/call"))
                ;; Tests
                (:file "test/agent-test"
