@@ -12,7 +12,8 @@
         :erlangen.algorithms
         :bordeaux-threads)
   (:shadowing-import-from :erlangen.conditions :timeout)
-  (:export :agent
+  (:export :*agent*
+           :agent
            :spawn
            :link
            :unlink
