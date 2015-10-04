@@ -8,6 +8,10 @@
 (in-package :erlangen.algorithms)
 
 (defun poll-timeout% (predicate timeout poll-interval success-fn fail-fn)
+  (when (= timeout 0)
+    (if (funcall predicate)
+        (return-from poll-timeout% (funcall success-fn))
+        (return-from poll-timeout% (funcall fail-fn))))
   (loop for elapsed = 0 then (+ elapsed poll-interval) do
        (cond ((> elapsed timeout)
               (return-from poll-timeout% (funcall fail-fn)))
