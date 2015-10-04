@@ -121,14 +121,14 @@
 
    *Exceptional Situations:*
 
-   If {receive} was not called by an _agent_ an _error_ of _type_
+   If {receive} is not called by an _agent_ an _error_ of _type_
    {type-error} is signaled.
 
    If the _calling agent_ was killed by another _agent_ by use of {exit}
    a _serious-condition_ of _type_ {exit} is signaled.
 
-   If _timeout_ was supplied and is exceeded and _error_ of _type_
-   {timeout} is signaled."
+   If _timeout_ is supplied and exceeded and _error_ of _type_ {timeout}
+   is signaled."
   (check-type *agent* agent)
   (flet ((receive-message ()
            (let ((message (dequeue-message (agent-mailbox *agent*))))
