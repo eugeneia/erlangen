@@ -16,4 +16,6 @@
                       :depends-on ("agent" "registry" "conditions"))
                ;; Tests
                (:file "test/agent-test"
-                      :depends-on ("agent"))))
+                      :depends-on ("agent")))
+  :depends-on ("jpl-queues"
+               "bordeaux-threads"))
