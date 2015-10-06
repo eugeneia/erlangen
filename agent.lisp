@@ -53,7 +53,7 @@
   (mailbox (error "MAILBOX must be supplied.") :type mailbox)
   (links nil :type list)
   (monitors nil :type list)
-  (lock (make-lock "erlangen.agent-lock") :type lock))
+  (lock (make-lock "erlangen.agent-lock")))
 
 (defmethod print-object ((o agent) stream)
   (print-unreadable-object (o stream :type t :identity t)))
