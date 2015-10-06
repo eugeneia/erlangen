@@ -4,7 +4,8 @@
   (:use :cl
         :jpl-queues
         :bordeaux-threads)
-  (:export :make-mailbox
+  (:export :mailbox
+           :make-mailbox
            :enqueue-message
            :empty-p
            :dequeue-message
