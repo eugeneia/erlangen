@@ -8,7 +8,7 @@
         :erlangen.registry
         :erlangen.conditions
         :erlangen.macros
-        :erlangen.call)
+        :erlangen.distribution.call)
   ;; Some symbols with generic definitions (local/registered/remote
   ;; agents) are redefined in this package and thus shadowed.
   (:shadow :send
