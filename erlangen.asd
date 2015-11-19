@@ -16,6 +16,12 @@
                       :depends-on ("algorithms"))
                (:file "distribution/call")
                (:file "distribution/protocol/buffers")
+               (:file "distribution/protocol/common"
+                      :depends-on ("distribution/protocol/buffers"))
+               (:file "distribution/protocol/port-mapper"
+                      :depends-on ("distribution/protocol/buffers"
+                                   "distribution/protocol/common"
+                                   "macros"))
                (:file "erlangen"
                       :depends-on ("agent"
                                    "registry"
