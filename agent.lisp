@@ -197,48 +197,50 @@ FUNCTION."
     (make-agent-thread function agent)
     agent))
 
-(defun spawn-attached (mode function mailbox-size)
+(defun spawn-attached (mode to function mailbox-size)
   "Spawn agent with MAILBOX-SIZE that will execute FUNCTION attached to
-the calling agent in MODE."
+TO in MODE."
   (let ((agent
          (ecase mode
            (:link
-            (make-agent function (list *agent*) nil mailbox-size))
+            (make-agent function (list to) nil mailbox-size))
            (:monitor
-            (make-agent function nil (list *agent*) mailbox-size)))))
-    (with-agent (*agent*)
-      (push agent (agent-links *agent*)))
+            (make-agent function nil (list to) mailbox-size)))))
+    (with-agent (to)
+      (push agent (agent-links to)))
     agent))
 
-(defun spawn (function &key attach (mailbox-size *default-mailbox-size*))
+(defun spawn (function &key attach
+                            (to *agent*)
+                            (mailbox-size *default-mailbox-size*))
   "Node-local SPAWN. See ERLANGEN:SPAWN for generic implementation."
-  (case attach
-    (:link     (check-type *agent* agent)
-               (spawn-attached :link function mailbox-size))
-    (:monitor  (check-type *agent* agent)
-               (spawn-attached :monitor function mailbox-size))
-    (otherwise (make-agent function nil nil mailbox-size))))
+  (ecase attach
+    (:link     (check-type to agent)
+               (spawn-attached :link to function mailbox-size))
+    (:monitor  (check-type to agent)
+               (spawn-attached :monitor to function mailbox-size))
+    ((nil)     (make-agent function nil nil mailbox-size))))
 
-(defun link (agent mode)
+(defun link (agent mode &optional (to *agent*))
   "Node-local LINK. See ERLANGEN:LINK for generic implementation."
-  (check-type *agent* agent)
-  (when (eq agent *agent*)
+  (check-type to agent)
+  (when (eq agent to)
     (error "Can not link to self."))
   (with-agent (agent)
     (ecase mode
-      (:link    (pushnew *agent* (agent-links agent)))
-      (:monitor (pushnew *agent* (agent-monitors agent)))))
-  (with-agent (*agent*)
-    (pushnew agent (agent-links *agent*))))
+      (:link    (pushnew to (agent-links agent)))
+      (:monitor (pushnew to (agent-monitors agent)))))
+  (with-agent (to)
+    (pushnew agent (agent-links to))))
 
-(defun unlink (agent)
+(defun unlink (agent &optional (from *agent*))
   "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
-  (check-type *agent* agent)
-  (when (eq agent *agent*)
+  (check-type from agent)
+  (when (eq agent from)
     (error "Can not unlink from self."))
   (with-agent (agent)
-    (setf #1=(agent-links agent)    (remove *agent* #1#)
-          #2=(agent-monitors agent) (remove *agent* #2#)))
-  (with-agent (*agent*)
-    (setf #3=(agent-links *agent*)    (remove agent #3#)
-          #4=(agent-monitors *agent*) (remove agent #4#))))
+    (setf #1=(agent-links agent)    (remove from #1#)
+          #2=(agent-monitors agent) (remove from #2#)))
+  (with-agent (from)
+    (setf #3=(agent-links from)    (remove agent #3#)
+          #4=(agent-monitors from) (remove agent #4#))))
