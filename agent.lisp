@@ -67,10 +67,12 @@
     (with-agent (*agent*)
       ;; Kill links.
       (loop for link in links do
-           (ignore-errors (exit reason link)))
+           (ignore-errors
+             (erlangen:exit reason link)))
       ;; Message monitors.
       (loop for monitor in monitors do
-           (ignore-errors (send `(,*agent* . ,reason) monitor))))))
+           (ignore-errors
+             (erlangen:send `(,*agent* . ,reason) monitor))))))
 
 (defun exit (reason agent)
   "Node-local EXIT. See ERLANGEN:EXIT for generic implementation."
