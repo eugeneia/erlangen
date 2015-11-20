@@ -1,12 +1,5 @@
 ;;;; Erlangen core macros.
 
-(defpackage erlangen.macros
-    (:documentation "Erlangen core macros.")
-    (:use :cl
-          :erlangen.agent
-          :erlangen.algorithms)
-    (:export :select))
-
 (in-package erlangen.macros)
 
 (defun receive-nowait ()

@@ -1,11 +1,5 @@
 ;;;; Reusable algorithms.
 
-(defpackage erlangen.algorithms
-  (:documentation "Reusable algorithms.")
-  (:use :cl)
-  (:export :with-poll-timeout
-           :with-poll-select))
-
 (in-package :erlangen.algorithms)
 
 (defun poll-timeout% (predicate timeout poll-interval success-fn fail-fn)

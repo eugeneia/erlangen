@@ -1,39 +1,27 @@
-;;;; Protocol wire format DSL.
-
-(defpackage erlangen.distribution.protocol.buffers
-  (:documentation
-   "DSL to help define wire formats for protocol messages. Core is the
-  DEFINE-MESSAGE macro:
-
-    define-message <mtype> <mname> [<field>]*
-
-    field::= (<fname> <ftype>)
-    ftype::= integer|string|value
-
-  Where MNAME and FNAME are symbols and MTYPE is an unsigned integer. The
-  FTYPEs are as follows:
-
-    integer - unsigned-byte 32
-    string - a string
-    value - any value encodable by cl-conspack
-
-  DEFINE-MESSAGE will define the functions
-
-    write-<mname> [field-value]* &optional stream
-    read-<mname> octets => [field-value]*
-
-  respectively. WRITE-<MNAME> writes a message of type <MTYPE> with
-  [FIELD-VALUE]* to STREAM (if supplied) or returns it as a vector of
-  octets. READ-<MNAME> reads a message of type <MTYPE> from OCTETS and
-  return [FIELD-VALUE]*. Use these with READ-MESSAGE and READ-MESSAGE*.")
-  (:use :cl
-        :trivial-utf-8
-        :fast-io
-        :conspack)
-  (:export :define-message
-           :read-message
-           :read-message*
-           :value))
+;;;; Protocol wire format DSL. Core is the DEFINE-MESSAGE macro:
+;;;;
+;;;; define-message <mtype> <mname> [<field>]*
+;;;;
+;;;;   field::= (<fname> <ftype>)
+;;;;   ftype::= integer|string|value
+;;;;
+;;;; Where MNAME and FNAME are symbols and MTYPE is an unsigned
+;;;; integer. The FTYPEs are as follows:
+;;;;
+;;;;   integer - unsigned-byte 32
+;;;;   string - a string
+;;;;   value - any value encodable by cl-conspack
+;;;;
+;;;; DEFINE-MESSAGE will define the functions
+;;;;
+;;;;   write-<mname> [field-value]* &optional stream
+;;;;   read-<mname> octets => [field-value]*
+;;;;
+;;;; respectively. WRITE-<MNAME> writes a message of type <MTYPE> with
+;;;; [FIELD-VALUE]* to STREAM (if supplied) or returns it as a vector of
+;;;; octets. READ-<MNAME> reads a message of type <MTYPE> from OCTETS and
+;;;; return [FIELD-VALUE]*. Use these with READ-MESSAGE and
+;;;; READ-MESSAGE*.
 
 (in-package :erlangen.distribution.protocol.buffers)
 

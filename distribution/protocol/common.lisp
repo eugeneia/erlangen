@@ -1,20 +1,5 @@
 ;;;; Common protocol subset.
 
-(defpackage erlangen.distribution.protocol.common
-  (:documentation "Common distribution protocol subset.")
-  (:use :cl
-        :ccl
-        :erlangen.distribution.protocol.buffers)
-  (:export :*i/o-timeout*
-           :with-connect
-           :with-listen
-           :send-hello
-           :assert-protocol-version
-           :write-error-reply
-           :read-error-reply
-           :write-ack-reply
-           :read-ack-reply))
-
 (in-package :erlangen.distribution.protocol.common)
 
 (defparameter *protocol-version* #x00

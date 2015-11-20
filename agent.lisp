@@ -1,28 +1,5 @@
 ;;;; Asynchronous agents (similar to Erlang processes).
 
-(defpackage erlangen.agent
-  (:documentation
-   "Node-local implementation of asynchronous _agents_ that can
-  communicate via message passing. The interface is mostly equivalent to
-  Erlang's processes except (1) without asynchronous exceptions and (2)
-  without a blocking version of {send}.")
-  (:use :cl
-        :erlangen.mailbox
-        :erlangen.conditions
-        :erlangen.algorithms
-        :bordeaux-threads)
-  (:shadowing-import-from :erlangen.conditions :timeout)
-  (:export :*agent*
-           :agent
-           :spawn
-           :link
-           :unlink
-           :send
-           :receive
-           :exit
-           :*default-mailbox-size*
-           :*agent-debug*))
-
 (in-package :erlangen.agent)
 
 (defvar *agent* nil

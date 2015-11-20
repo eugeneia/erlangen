@@ -1,12 +1,5 @@
 ;;;; Erlangen portable function call.
 
-(defpackage erlangen.distribution.call
-  (:documentation
-   "Portable function call objects.")
-  (:use :cl)
-  (:export :call
-           :make-function))
-
 (in-package :erlangen.distribution.call)
 
 (defun callable-p (call)

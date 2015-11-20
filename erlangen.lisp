@@ -1,37 +1,4 @@
 ;;;; Erlangen public API.
-
-(defpackage erlangen
-  (:documentation
-   "Distributed asychronous message passing system for Common Lisp.")
-  (:use :cl
-        :erlangen.agent
-        :erlangen.registry
-        :erlangen.conditions
-        :erlangen.macros
-        :erlangen.distribution.call)
-  ;; Some symbols with generic definitions (local/registered/remote
-  ;; agents) are redefined in this package and thus shadowed.
-  (:shadow :send
-           :exit
-           :link
-           :unlink
-           :spawn)
-  (:export :agent
-           :spawn
-           :call
-           :link
-           :unlink
-           :send
-           :send-error
-           :receive
-           :timeout
-           :exit
-           :register
-           :unregister
-           :registered
-           :select
-           :*default-mailbox-size*
-           :*agent-debug*))
      
 (in-package :erlangen)
 

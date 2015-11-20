@@ -5,25 +5,39 @@
   "Distributed asychronous message passing system for Common Lisp."
   :author "Max Rottenkolber <max@mr.gy>"
   :license "Not licensed"
-  :components ((:file "conditions")
-               (:file "mailbox")
-               (:file "algorithms")
+  :components ((:file "packages")
+               (:file "conditions"
+                      :depends-on ("packages"))
+               (:file "mailbox"
+                      :depends-on ("packages"))
+               (:file "algorithms"
+                      :depends-on ("packages"))
                (:file "agent"
-                      :depends-on ("mailbox" "algorithms" "conditions"))
+                      :depends-on ("packages"
+                                   "mailbox"
+                                   "algorithms"
+                                   "conditions"))
                (:file "registry"
-                      :depends-on ("agent"))
+                      :depends-on ("packages"
+                                   "agent"))
                (:file "macros"
-                      :depends-on ("algorithms"))
-               (:file "distribution/call")
-               (:file "distribution/protocol/buffers")
+                      :depends-on ("packages"
+                                   "algorithms"))
+               (:file "distribution/call"
+                      :depends-on ("packages"))
+               (:file "distribution/protocol/buffers"
+                      :depends-on ("packages"))
                (:file "distribution/protocol/common"
-                      :depends-on ("distribution/protocol/buffers"))
+                      :depends-on ("packages"
+                                   "distribution/protocol/buffers"))
                (:file "distribution/protocol/port-mapper"
-                      :depends-on ("distribution/protocol/buffers"
+                      :depends-on ("packages"
+                                   "distribution/protocol/buffers"
                                    "distribution/protocol/common"
                                    "macros"))
                (:file "erlangen"
-                      :depends-on ("agent"
+                      :depends-on ("packages"
+                                   "agent"
                                    "registry"
                                    "conditions"
                                    "macros"

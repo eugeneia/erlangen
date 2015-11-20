@@ -1,18 +1,5 @@
 ;;;; Mailbox FIFO queue implementation based on JPL-QUEUES.
 
-(defpackage erlangen.mailbox
-  (:use :cl
-        :jpl-queues
-        :bordeaux-threads)
-  (:export :mailbox
-           :make-mailbox
-           :enqueue-message
-           :empty-p
-           :dequeue-message
-           :close-mailbox
-           :mailbox-full
-           :mailbox-closed))
-
 (in-package :erlangen.mailbox)
 
 (defstruct (mailbox (:constructor make-mailbox%))

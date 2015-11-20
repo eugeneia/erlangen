@@ -4,19 +4,6 @@
 ;;;; node's listening port on that host. Local nodes can register a port
 ;;;; with the registry so that they can be found by remote nodes.
 
-(defpackage erlangen.distribution.protocol.port-mapper
-  (:documentation "Port mapper portion of the distribution protocol.")
-  (:use :cl
-        :ccl
-        :erlangen.agent
-        :erlangen.macros
-        :erlangen.distribution.protocol.buffers
-        :erlangen.distribution.protocol.common)
-  (:export :port-mapper
-           :register-node
-           :query-node-port
-           :query-nodes))
-
 (in-package :erlangen.distribution.protocol.port-mapper)
 
 ;; Registry protocol messages. REGISTER-REQUEST is sent to the registry
