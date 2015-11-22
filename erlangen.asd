@@ -44,7 +44,10 @@
                                    "distribution/call"))
                ;; Tests
                (:file "test/agent-test"
-                      :depends-on ("agent")))
+                      :depends-on ("agent"))
+               (:file "test/port-mapper-test"
+                      :depends-on ("distribution/protocol/port-mapper"
+                                   "erlangen")))
   :depends-on ("jpl-queues"
                "bordeaux-threads"
                "trivial-utf-8"
