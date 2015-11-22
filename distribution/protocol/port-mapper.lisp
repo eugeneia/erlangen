@@ -90,7 +90,10 @@ to indicate failure."
 (defun make-port-registry (context host port)
   "Returns listener for registry service on PORT of HOST in CONTEXT."
   (lambda ()
-    (with-listen (socket host port :keepalive t)
+    (with-socket (socket (make-socket* :connect :passive
+                                       :local-host host
+                                       :local-port port
+                                       :keepalive t))
       (loop do (select
                 ((accept-connection socket :wait nil) (connection)
                   (spawn (make-register-request-handler
@@ -136,7 +139,9 @@ to indicate failure."
 (defun make-port-directory (context host port)
   "Returns listener for directory service on PORT of HOST in CONTEXT."
   (lambda ()
-    (with-listen (socket host port)
+    (with-socket (socket (make-socket* :connect :passive
+                                       :local-host host
+                                       :local-port port))
       (loop do (select
                 ((accept-connection socket :wait nil) (connection)
                   (ignore-errors
@@ -163,7 +168,8 @@ REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
   "Register PORT for node by NAME on registry service listening on
 REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
 \"localhost\")."
-  (with-connect (socket registry-host registry-port)
+  (with-socket (socket (make-socket* :remote-host registry-host
+                                     :remote-port registry-port))
     (assert-protocol-version socket)
     (write-register-request name port socket)
     (force-output socket)
@@ -176,7 +182,8 @@ REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
   "Query directory service on DIRECTORY-PORT (defaults to 20002) of HOST
 for port of node by NODE-NAME. Returns the port number on success or NIL
 and a string describing the failure."
-  (with-connect (socket host directory-port)
+  (with-socket (socket (make-socket* :remote-host host
+                                     :remote-port directory-port))
     (assert-protocol-version socket)
     (write-port-request node-name socket)
     (force-output socket)
@@ -189,7 +196,8 @@ and a string describing the failure."
   "Query directory service on DIRECTORY-PORT (defaults to 20002) of HOST
 for node-to-port mapping. Returns an alist on success or signals an error
 on failure."
-  (with-connect (socket host directory-port)
+  (with-socket (socket (make-socket* :remote-host host
+                                     :remote-port directory-port))
     (assert-protocol-version socket)
     (write-nodes-request socket)
     (force-output socket)

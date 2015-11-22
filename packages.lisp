@@ -92,10 +92,8 @@
         :ccl
         :erlangen.distribution.protocol.buffers)
   (:export :*i/o-timeout*
-           :with-connect
-           :with-listen
-           :connect
-           :find-listening-socket
+           :make-socket*
+           :with-socket
            :send-hello
            :assert-protocol-version
            :write-error-reply

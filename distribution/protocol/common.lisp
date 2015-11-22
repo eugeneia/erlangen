@@ -13,24 +13,20 @@ be bumped in the event of changes to the protocol.")
   "Default input/output timeout for TCP stream used throughout the
 protocol implementation.")
 
-(defmacro with-connect ((socket host port) &body body)
-  "Connects SOCKET to PORT on HOST (client)."
-  `(with-open-socket (,socket :remote-host ,host
-                              :remote-port ,port
-                              :input-timeout *i/o-timeout*
-                              :output-timeout *i/o-timeout*
-                              :connect-timeout *i/o-timeout*)
-     ,@body))
+(defun make-socket* (&rest other-keys)
+  "Returns a socket connected to PORT on HOST."
+  (apply 'make-socket
+         :input-timeout *i/o-timeout*
+         :output-timeout *i/o-timeout*
+         other-keys))
 
-(defmacro with-listen ((socket host port &rest other-keys) &body body)
-  "Binds SOCKET to PORT on HOST (server)."
-  `(with-open-socket (,socket :connect :passive
-                              :local-host ,host
-                              :local-port ,port
-                              :input-timeout *i/o-timeout*
-                              :output-timeout *i/o-timeout*
-                              ,@other-keys)
-     ,@body))
+(defmacro with-socket ((var socket) &body body
+                       &aux (done-sym (gensym "done")))
+  "Execute BODY with VAR bound to SOCKET. SOCKET is closed on exit."
+  `(let ((,var ,socket) ,done-sym)
+     (unwind-protect (multiple-value-prog1 (progn ,@body)
+                       (setq ,done-sym t))
+       (close ,var :abort (not ,done-sym)))))
 
 ;; Basic protocol messages. HELLO-REPLY is sent to connecting clients (as
 ;; a response to a protocol setup request implied by connection
