@@ -116,6 +116,35 @@
            :query-node-port
            :query-nodes))
 
+(defpackage erlangen.distribution.id
+  (:documentation "Universal agent identifiers.")
+  (:use :cl
+        :ccl
+        :erlangen.agent
+        :split-sequence)
+  (:export :host-name
+           :node-name
+           :decode-id
+           :agent-id
+           :find-agent))
+
+(defpackage erlangen.distribution.protocol.node
+  (:documentation "Node portion of the distribution protocol.")
+  (:use :cl
+        :ccl
+        :erlangen.agent
+        :erlangen.macros
+        :erlangen.distribution.call
+        :erlangen.distribution.id
+        :erlangen.distribution.protocol.buffers
+        :erlangen.distribution.protocol.common
+        :erlangen.distribution.protocol.port-mapper)
+  (:export :make-node-server
+           :remote-spawn
+           :remote-send
+           :remote-link
+           :remote-unlink))
+
 (defpackage erlangen
   (:documentation
    "Distributed asychronous message passing system for Common Lisp.")

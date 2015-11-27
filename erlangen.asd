@@ -32,9 +32,19 @@
                                    "distribution/protocol/buffers"))
                (:file "distribution/protocol/port-mapper"
                       :depends-on ("packages"
+                                   "macros"
                                    "distribution/protocol/buffers"
-                                   "distribution/protocol/common"
-                                   "macros"))
+                                   "distribution/protocol/common"))
+               (:file "distribution/id"
+                      :depends-on ("packages"
+                                   "agent"))
+               (:file "distribution/protocol/node"
+                      :depends-on ("packages"
+                                   "agent"
+                                   "macros"
+                                   "distribution/call"
+                                   "distribution/protocol/buffers"
+                                   "distribution/protocol/common"))
                (:file "erlangen"
                       :depends-on ("packages"
                                    "agent"
@@ -47,9 +57,15 @@
                       :depends-on ("agent"))
                (:file "test/port-mapper-test"
                       :depends-on ("distribution/protocol/port-mapper"
-                                   "erlangen")))
+                                   "erlangen"))
+               (:file "test/node-test"
+                      :depends-on ("agent"
+                                   "distribution/protocol/node"
+                                   "distribution/protocol/port-mapper"
+                                   "distribution/id")))
   :depends-on ("jpl-queues"
                "bordeaux-threads"
                "trivial-utf-8"
                "fast-io"
-               "cl-conspack"))
+               "cl-conspack"
+               "split-sequence"))
