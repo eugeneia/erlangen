@@ -41,6 +41,8 @@
   (:export :*agent*
            :agent
            :spawn
+           :add-link
+           :remove-link
            :link
            :unlink
            :send

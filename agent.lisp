@@ -200,26 +200,31 @@ TO in MODE."
                (spawn-attached :monitor to function mailbox-size))
     ((nil)     (make-agent function nil nil mailbox-size))))
 
-(defun link (agent mode &optional (to *agent*))
-  "Node-local LINK. See ERLANGEN:LINK for generic implementation."
-  (check-type to agent)
-  (when (eq agent to)
-    (error "Can not link to self."))
+(defun add-link (agent mode to)
+  "Add link (TO) with MODE to AGENT."
   (with-agent (agent)
     (ecase mode
-      (:link    (pushnew to (agent-links agent)))
-      (:monitor (pushnew to (agent-monitors agent)))))
-  (with-agent (to)
-    (pushnew agent (agent-links to))))
+      (:link    (pushnew to (agent-links agent)    :test 'equal))
+      (:monitor (pushnew to (agent-monitors agent) :test 'equal))))
+  (values))
 
-(defun unlink (agent &optional (from *agent*))
-  "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
-  (check-type from agent)
-  (when (eq agent from)
-    (error "Can not unlink from self."))
+(defun remove-link (agent to)
+  "Remove link (TO) from AGENT."
   (with-agent (agent)
-    (setf #1=(agent-links agent)    (remove from #1#)
-          #2=(agent-monitors agent) (remove from #2#)))
-  (with-agent (from)
-    (setf #3=(agent-links from)    (remove agent #3#)
-          #4=(agent-monitors from) (remove agent #4#))))
+    (setf #1=(agent-links agent)    (remove to #1# :test 'equal)
+          #2=(agent-monitors agent) (remove to #2# :test 'equal)))
+  (values))
+
+(defun link (agent mode)
+  "Node-local LINK. See ERLANGEN:LINK for generic implementation."
+  (when (eq agent *agent*)
+    (error "Can not link to self."))
+  (add-link agent mode *agent*)
+  (add-link *agent* :link agent))
+
+(defun unlink (agent)
+  "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
+  (when (eq agent *agent*)
+    (error "Can not unlink from self."))
+  (remove-link agent *agent*)
+  (remove-link *agent* agent))
