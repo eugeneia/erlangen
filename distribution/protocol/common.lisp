@@ -56,4 +56,5 @@ not match this implementation an error is signaled."
   (let ((remote-version (read-message* #x00 'read-hello-reply socket)))
     (unless (= remote-version *protocol-version*)
       (error "Protocol version mismatch (local: ~a, remote ~a)."
-             *protocol-version* remote-version))))
+             *protocol-version* remote-version)))
+  (values))
