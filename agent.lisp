@@ -185,8 +185,10 @@ TO in MODE."
             (make-agent function (list to) nil mailbox-size))
            (:monitor
             (make-agent function nil (list to) mailbox-size)))))
-    (with-agent (to)
-      (push agent (agent-links to)))
+    ;; Add link to TO only if its an AGENT structure.
+    (typecase to
+      (agent (with-agent (to)
+               (push agent (agent-links to)))))
     agent))
 
 (defun spawn (function &key attach
@@ -194,10 +196,8 @@ TO in MODE."
                             (mailbox-size *default-mailbox-size*))
   "Node-local SPAWN. See ERLANGEN:SPAWN for generic implementation."
   (ecase attach
-    (:link     (check-type to agent)
-               (spawn-attached :link to function mailbox-size))
-    (:monitor  (check-type to agent)
-               (spawn-attached :monitor to function mailbox-size))
+    (:link     (spawn-attached :link to function mailbox-size))
+    (:monitor  (spawn-attached :monitor to function mailbox-size))
     ((nil)     (make-agent function nil nil mailbox-size))))
 
 (defun add-link (agent mode to)
