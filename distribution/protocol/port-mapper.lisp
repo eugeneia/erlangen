@@ -154,8 +154,8 @@ to indicate failure."
                          (directory-port 20002))
   "Starts a port mapper instance. Registry service listens on
 REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
-\"localhost\"). Directory service listens on DIRECTORY-PORT (defaults to
-20002) of DIRECTORY-HOST (defaults to \"0.0.0.0\")."
+“localhost”). Directory service listens on DIRECTORY-PORT (defaults to
+20002) of DIRECTORY-HOST (defaults to “0.0.0.0”)."
   (let ((context (make-server-context)))
     (spawn (make-port-registry context registry-host registry-port)
            :attach :link)
@@ -167,7 +167,7 @@ REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
                                      (registry-port 10001))
   "Register PORT for node by NAME on registry service listening on
 REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
-\"localhost\"). Signals an error on failure."
+“localhost”). Signals an error on failure."
   (with-socket (socket (make-socket* :remote-host registry-host
                                      :remote-port registry-port))
     (assert-protocol-version socket)
