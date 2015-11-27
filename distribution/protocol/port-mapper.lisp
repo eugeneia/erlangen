@@ -180,8 +180,8 @@ REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
 
 (defun query-node-port (host node-name &key (directory-port 20002))
   "Query directory service on DIRECTORY-PORT (defaults to 20002) of HOST
-for port of node by NODE-NAME. Returns the port number on success or NIL
-and a string describing the failure."
+for port of node by NODE-NAME. Returns the port number on success or
+signals an error on failure."
   (with-socket (socket (make-socket* :remote-host host
                                      :remote-port directory-port))
     (assert-protocol-version socket)
@@ -189,7 +189,7 @@ and a string describing the failure."
     (force-output socket)
     (multiple-value-bind (type reply) (read-message socket)
       (ecase type
-        (#x01 (values nil (read-error-reply reply)))
+        (#x01 (error (read-error-reply reply)))
         (#x21 (read-port-reply reply))))))
 
 (defun query-nodes (host &key (directory-port 20002))

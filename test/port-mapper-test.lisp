@@ -38,10 +38,12 @@
                (error "Was able to register name `node1' twice.")))
            (exit :kill node1)
            (sleep 2)
-           (assert
-            (eql (query-node-port "localhost" "node1"
-                                  :directory-port directory-port)
-                 nil))
+           (handler-case (query-node-port "localhost" "node1"
+                                          :directory-port directory-port)
+             (error (error) error)
+             (:no-error (value)
+               (declare (ignore value))
+               (error "Failed to unregister `node1'.")))
            (assert
             (equal (query-nodes "localhost"
                                 :directory-port directory-port)
