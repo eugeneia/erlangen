@@ -11,7 +11,7 @@
    {*default-mailbox-size*} is the default value of the {:mailbox-size}
    parameter to {spawn}.")
 
-(defparameter *agent-debug* nil
+(defvar *agent-debug* nil
   "*Description:*
 
    If {*agent-debug*} is _true_ when calling {spawn} _conditions_ of
