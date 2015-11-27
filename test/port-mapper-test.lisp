@@ -35,6 +35,8 @@
                               :registry-port registry-port)
              (simple-error (error) (declare (ignore error)))
              (:no-error ()
+               ;; This branch will never be taken, because REGISTER-NODE
+               ;; wont exit on success.
                (error "Was able to register name `node1' twice.")))
            (exit :kill node1)
            (sleep 2)
@@ -49,6 +51,5 @@
                                 :directory-port directory-port)
                    nil))
            (exit :kill port-mapper))
-      (ignore-errors
-        (exit :kill port-mapper)
-        (exit :kill node1)))))
+      (ignore-errors (exit :kill port-mapper))
+      (ignore-errors (exit :kill node1)))))

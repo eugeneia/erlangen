@@ -167,7 +167,7 @@ REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
                                      (registry-port 10001))
   "Register PORT for node by NAME on registry service listening on
 REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
-\"localhost\")."
+\"localhost\"). Signals an error on failure."
   (with-socket (socket (make-socket* :remote-host registry-host
                                      :remote-port registry-port))
     (assert-protocol-version socket)
