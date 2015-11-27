@@ -33,12 +33,12 @@ as its first value. Evaluate the CLAUSE's BODY with VARS bound to
 POLL-FORM's return values and return. If a CLAUSE's VARS are nil (empty),
 the clause will repeatedly be polled but never cause a return and its
 BODY will never be evaluated."
-  `(block select
+  `(block poll-select
      (loop do
           ,@(loop for clause in clauses collect
                  (destructuring-bind (form &optional vars &rest body)
                      clause
                    `(multiple-value-bind ,vars ,form
                       (when ,(first vars)
-                        (return-from select (progn ,@body))))))
+                        (return-from poll-select (progn ,@body))))))
           (sleep ,poll-interval))))
