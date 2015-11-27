@@ -202,46 +202,35 @@ to NODE of HOST."
                          (error error)))
        (release-lock (cdr ,connection-sym)))))
 
-(defmacro with-request ((host node) request &optional reply-id reply-sym
-                        &aux (socket-sym (gensym "socket")))
-  "Sends REQUEST to remote NODE of HOST, reads reply with REPLY-ID using
-function designated by REPLY-SYM and performs error handling. If REPLY-ID
-and REPLY-SYM are not supplied, defaults to handling ACK-REPLY."
-  `(with-connection (,socket-sym ,host ,node)
-     ,`(,@request ,socket-sym)
-     (force-output ,socket-sym)
-     (multiple-value-bind (type reply) (read-message ,socket-sym)
-       (ecase type
-         (#x01 (error (read-error-reply reply)))
-         (,(or reply-id #x02) ,(if reply-sym
-                                   `(,reply-sym reply)
-                                   '(values)))))))
-
 (defun remote-spawn (host node call parent attach mailbox-size)
   "Spawns agent on remote NODE of HOST using CALL, PARENT, ATTACH mode
 and MAILBOX-SIZE."
   (check-type call call)
   (check-type attach (member :link :monitor nil))
   (check-type mailbox-size (integer 1))
-  (with-request (host node)
-    (write-spawn-request call parent attach mailbox-size)
-    #x31 read-spawn-reply))
+  (with-connection (socket host node)
+    (do-request (socket)
+      (write-spawn-request call parent attach mailbox-size)
+      (#x31 read-spawn-reply))))
 
 (defun remote-send (message id)
   "Sends MESSAGE to remote agent by ID."
   (multiple-value-bind (host node) (decode-id id)
-    (with-request (host node)
-      (write-send-request message id))))
+    (with-connection (socket host node)
+      (do-request (socket)
+        (write-send-request message id)))))
 
 (defun remote-link (remote-id local-id mode)
   "Links remote agent by REMOTE-ID to agent by LOCAL-ID using MODE."
   (check-type mode (member :link :monitor))
   (multiple-value-bind (host node) (decode-id remote-id)
-    (with-request (host node)
-      (write-link-request remote-id local-id mode))))
+    (with-connection (socket host node)
+      (do-request (socket)
+        (write-link-request remote-id local-id mode)))))
 
 (defun remote-unlink (remote-id local-id)
   "Unlinks remote agent by REMOTE-ID from agent by LOCAL-ID."
   (multiple-value-bind (host node) (decode-id remote-id)
-    (with-request (host node)
-      (write-unlink-request remote-id local-id))))
+  (with-connection (socket host node)
+    (do-request (socket)
+      (write-unlink-request remote-id local-id)))))

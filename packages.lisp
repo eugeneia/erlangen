@@ -96,6 +96,7 @@
   (:export :*i/o-timeout*
            :make-socket*
            :with-socket
+           :do-request
            :send-hello
            :assert-protocol-version
            :write-error-reply

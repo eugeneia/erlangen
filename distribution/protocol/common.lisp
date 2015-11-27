@@ -28,6 +28,26 @@ protocol implementation.")
                        (setq ,done-sym t))
        (close ,var :abort (not ,done-sym)))))
 
+(defmacro do-request ((socket-var) request &optional expected-reply)
+  "REQUEST has the form (REQUEST-FN &rest ARGS) where REQUEST-FN is the
+request writer to be called and ARGS its arguments. EXPECTED-REPLY has
+the form (TYPE REPLY-FN) where TYPE is an unsigned integer and REPLY-FN
+is the reply reader to be called. Sends REQUEST over socket bound to
+SOCKET-VAR. If EXPECTED-REPLY is supplied reads reply as specified,
+otherwise expects ACK-REPLY. If reply is an ERROR-REPLY the appropriate
+error is signaled."
+  (check-type socket-var symbol)
+  `(progn
+     ,`(,@request ,socket-var)
+     (force-output ,socket-var)
+     (multiple-value-bind (type reply) (read-message ,socket-var)
+       (ecase type
+         (#x01 (error (read-error-reply reply)))
+         ,(if expected-reply
+              (destructuring-bind (reply-id reply-reader) expected-reply
+                `(,reply-id (,reply-reader reply)))
+              '(#x02 (values)))))))
+
 ;; Basic protocol messages. HELLO-REPLY is sent to connecting clients (as
 ;; a response to a protocol setup request implied by connection
 ;; establishment). It contains the protocol version offered by the

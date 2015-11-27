@@ -171,12 +171,9 @@ REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
   (with-socket (socket (make-socket* :remote-host registry-host
                                      :remote-port registry-port))
     (assert-protocol-version socket)
-    (write-register-request name port socket)
-    (force-output socket)
-    (multiple-value-bind (type reply) (read-message socket)
-      (ecase type
-        (#x01 (error (read-error-reply reply)))
-        (#x02 (keep-open socket))))))
+    (do-request (socket)
+      (write-register-request name port))
+    (keep-open socket)))
 
 (defun query-node-port (host node-name &key (directory-port 20002))
   "Query directory service on DIRECTORY-PORT (defaults to 20002) of HOST
@@ -185,12 +182,9 @@ signals an error on failure."
   (with-socket (socket (make-socket* :remote-host host
                                      :remote-port directory-port))
     (assert-protocol-version socket)
-    (write-port-request node-name socket)
-    (force-output socket)
-    (multiple-value-bind (type reply) (read-message socket)
-      (ecase type
-        (#x01 (error (read-error-reply reply)))
-        (#x21 (read-port-reply reply))))))
+    (do-request (socket)
+      (write-port-request node-name)
+      (#x21 read-port-reply))))
 
 (defun query-nodes (host &key (directory-port 20002))
   "Query directory service on DIRECTORY-PORT (defaults to 20002) of HOST
@@ -199,9 +193,6 @@ on failure."
   (with-socket (socket (make-socket* :remote-host host
                                      :remote-port directory-port))
     (assert-protocol-version socket)
-    (write-nodes-request socket)
-    (force-output socket)
-    (multiple-value-bind (type reply) (read-message socket)
-      (ecase type
-        (#x01 (error (read-error-reply reply)))
-        (#x23 (read-nodes-reply reply))))))
+    (do-request (socket)
+      (write-nodes-request)
+      (#x23 read-nodes-reply))))
