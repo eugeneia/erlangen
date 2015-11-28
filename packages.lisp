@@ -122,6 +122,7 @@
   (:use :cl
         :ccl
         :erlangen.agent
+        :erlangen.registry
         :split-sequence)
   (:export :host-name
            :node-name

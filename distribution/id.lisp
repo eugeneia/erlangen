@@ -79,6 +79,12 @@ could be derived from NAME."
         aid
         (error "~a is not a valid agent id." aid))))
 
+(defun find-registered-agent (aid)
+  "Returns registered agent by AID or nil if no such agent exists."
+  (let ((name (find-symbol aid :keyword)))
+    (when name
+      (ignore-errors (agent-by-name name)))))
+
 (defun agent-id (agent)
   "Return id for AGENT."
   (format nil "~a/~a/~a"
@@ -103,4 +109,4 @@ name."
       (multiple-value-bind (type aid) (decode-aid aid)
         (values (ecase type
                   (:anonymous  (find-anonymous-agent aid))
-                  (:registered (find-symbol aid :keyword))))))))
+                  (:registered (find-registered-agent aid))))))))
