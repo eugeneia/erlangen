@@ -82,8 +82,9 @@
              (error 'exit :reason reason))
       ;; We are killing another agent: send kill message, then close
       ;; agent's mailbox.
-      (progn (send `(:exit . ,reason) agent)
-             (close-mailbox (agent-mailbox agent)))))
+      (progn (send `(exit . ,reason) agent)
+             (close-mailbox (agent-mailbox agent))))
+  (values))
 
 (defun receive (&key timeout (poll-interval 1e-3))
   "*Arguments and Values:*
@@ -112,7 +113,7 @@
   (check-type *agent* agent)
   (flet ((receive-message ()
            (let ((message (dequeue-message (agent-mailbox *agent*))))
-             (if (and (consp message) (eq :exit (car message)))
+             (if (and (consp message) (eq 'exit (car message)))
                  (error 'exit :reason (cdr message))
                  message))))
     (if timeout
