@@ -91,6 +91,10 @@
        (error 'end-of-file :stream buffer))
      (funcall ',decode-function octets)))
 
+(defun decode-interning (octets)
+  "See https://github.com/conspack/cl-conspack/issues/1"
+  (with-interning () (decode octets)))
+
 (defun compile-read-message (fields)
   `(with-fast-input (buffer octets)
      (values
@@ -98,7 +102,7 @@
              (ecase type
                (integer '(readu32-le buffer))
                (string (compile-read-octets 'utf-8-bytes-to-string))
-               (value (compile-read-octets 'decode)))))))
+               (value (compile-read-octets 'decode-interning)))))))
 
 (defmacro define-message (type name &rest fields)
   "Define reader and writer functions for message of TYPE with FIELDS
