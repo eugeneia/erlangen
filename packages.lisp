@@ -123,7 +123,8 @@
         :ccl
         :erlangen.agent
         :erlangen.registry
-        :split-sequence)
+        :split-sequence
+        :conspack)
   (:export :host-name
            :node-name
            :decode-id

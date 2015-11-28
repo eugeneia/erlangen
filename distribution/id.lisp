@@ -110,3 +110,12 @@ name."
         (values (ecase type
                   (:anonymous  (find-anonymous-agent aid))
                   (:registered (find-registered-agent aid))))))))
+
+;; Specialized cl-conspack encoding/decoding for AGENT structures. Values
+;; of type AGENT will be encoded as their respective agent id and decoded
+;; as plain strings.
+(defmethod encode-object ((agent agent) &key &allow-other-keys)
+  `((,(agent-id agent))))
+(defmethod decode-object ((class (eql 'agent)) alist
+                          &key &allow-other-keys)
+  (caar alist))
