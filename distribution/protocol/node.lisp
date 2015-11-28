@@ -66,14 +66,15 @@
 (defun handle-send-request (connection request)
   "Handles REQUEST of type SEND-REQUEST on CONNECTION."
   (multiple-value-bind (message agent-id) (read-send-request request)
-    (handler-case (send message (find-agent agent-id))
-      (type-error (error)
-        (declare (ignore error))
-        (write-error-reply "No such agent." connection))
-      (error (error)
-        (declare (ignore error))
-        (write-error-reply "Unable to deliver message." connection))
-      (:no-error () (write-ack-reply connection)))))
+    (let ((agent (find-agent agent-id)))
+      (if agent
+          (handler-case (send message agent)
+            (error (error)
+              (declare (ignore error))
+              (write-error-reply
+               "Unable to deliver message." connection))
+            (:no-error () (write-ack-reply connection)))
+          (write-error-reply "No such agent." connection)))))
 
 (defun handle-link-request (connection request)
   "Handles REQUEST of type LINK-REQUEST on CONNECTION."
