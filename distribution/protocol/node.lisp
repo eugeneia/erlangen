@@ -12,9 +12,9 @@
 (in-package :erlangen.distribution.protocol.node)
 
 ;; SPAWN-REQUEST is sent by a node to issue a SPAWN. It contains a CALL
-;; (see ERLANGEN.DISTRIBUTION.CALL), the parent process identifier, the
+;; (see ERLANGEN.DISTRIBUTION.CALL), the parent agent identifier, the
 ;; attach mode (:LINK, :ATTACH or NIL) and the mailbox capacity of the
-;; process to create. The remote node must either spawn the process
+;; agent to create. The remote node must either spawn the agent
 ;; accordingly and acknowlege the request by sending a SPAWN-REPLY or
 ;; indicate failure to do so by sending an ERROR-REPLY.
 ;;
@@ -25,7 +25,7 @@
 (define-message #x31 spawn-reply (agent string))
 
 ;; SEND-REQUEST is sent by a node to issue a SEND. It contains the
-;; message to be delivered and the target process. The remote node must
+;; message to be delivered and the target agent. The remote node must
 ;; either acknowledge the delivery of the message by sending an ACK-REPLY
 ;; or indicate failure to do so by sending an ERROR-REPLY.
 (define-message #x32 send-request (message value) (agent string))
@@ -33,13 +33,13 @@
 ;; LINK-REQUEST is sent by a node to issue a LINK. It contains a remote
 ;; agent identifier and a local agent identifier as well as the desired
 ;; link mode (:LINK or :ATTACH). The remote node must either link the
-;; specified processes accordingly and acknowlege the request by sending
-;; an ACK-REPLY or indicate failure to do so by sending an ERROR-REPLY.
+;; specified agents accordingly and acknowlege the request by sending an
+;; ACK-REPLY or indicate failure to do so by sending an ERROR-REPLY.
 ;;
 ;; UNLINK-REQUEST is sent by a node to issue an UNLINK. It contains a
 ;; remote agent identifier and a local agent identifier. The remote node
-;; must either unlink the specified processes accordingly and acknowlege
-;; the request by sending an ACK-REPLY or indicate failure to do so by
+;; must either unlink the specified agents accordingly and acknowlege the
+;; request by sending an ACK-REPLY or indicate failure to do so by
 ;; sending an ERROR-REPLY.
 (define-message #x34 link-request
   (remote-agent string) (local-agent string) (mode value))
