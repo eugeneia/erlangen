@@ -142,6 +142,7 @@
         :erlangen.distribution.protocol.common
         :erlangen.distribution.protocol.port-mapper)
   (:export :make-node-server
+           :clear-connections
            :remote-spawn
            :remote-send
            :remote-link

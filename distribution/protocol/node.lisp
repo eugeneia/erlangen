@@ -191,6 +191,16 @@ exists. Otherwise establishes and returns a new connection."
     (or (get-established-connection nid)
         (establish-connection nid))))
 
+(defun clear-connections ()
+  "Closes all remote connections."
+  (with-lock-grabbed (*remote-connections*/lock)
+    (maphash (lambda (nid connection)
+               (with-lock-grabbed ((cdr connection))
+                 (when (car connection)
+                   (close-connection connection))
+                 (remhash nid *remote-connections*)))
+             *remote-connections*)))
+
 (defmacro with-connection ((var host node) &body body
                            &aux (connection-sym (gensym "connection")))
   "Evaluate BODY with VAR bound to a socket of an established connection

@@ -105,4 +105,5 @@
       (ignore-errors (exit :kill (find-agent id)))
       (ignore-errors (exit :kill register-agent))
       (ignore-errors (exit :kill node-server-agent))
-      (ignore-errors (exit :kill port-mapper)))))
+      (ignore-errors (exit :kill port-mapper))
+      (clear-connections))))
