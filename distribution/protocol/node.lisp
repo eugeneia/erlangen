@@ -242,6 +242,6 @@ and MAILBOX-SIZE."
 (defun remote-unlink (remote-id local-id)
   "Unlinks remote agent by REMOTE-ID from agent by LOCAL-ID."
   (multiple-value-bind (host node) (decode-id remote-id)
-  (with-connection (socket host node)
-    (do-request (socket)
-      (write-unlink-request remote-id local-id)))))
+    (with-connection (socket host node)
+      (do-request (socket)
+        (write-unlink-request remote-id local-id)))))
