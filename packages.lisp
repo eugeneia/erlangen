@@ -146,7 +146,8 @@
            :remote-spawn
            :remote-send
            :remote-link
-           :remote-unlink))
+           :remote-unlink
+           :remote-exit))
 
 (defpackage erlangen
   (:documentation

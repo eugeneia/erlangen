@@ -46,6 +46,12 @@
 (define-message #x36 unlink-request
   (remote-agent string) (local-agent string))
 
+;; EXIT-REQUEST is sent by a node to issue an EXIT. It contains the exit
+;; reason and the target agent. The remote node must either kill the
+;; target agent accordingly by sending an ACK-REPLY or indicate failure
+;; to do so by sending an ERROR-REPLY.
+(define-message #x38 exit-request (reason value) (agent string))
+
 (defun handle-spawn-request (connection request)
   "Handles REQUEST of type SPAWN-REQUEST on CONNECTION."
   (multiple-value-bind (call parent attach mailbox-size)
@@ -107,6 +113,18 @@
               (write-ack-reply connection)))
           (write-error-reply "No such agent." connection)))))
 
+(defun handle-exit-request (connection request)
+  "Handles REQUEST of type EXIT-REQUEST on CONNECTION."
+  (multiple-value-bind (reason agent-id) (read-exit-request request)
+    (let ((agent (find-agent agent-id)))
+      (if agent
+          (handler-case (exit reason agent)
+            (error (error)
+              (declare (ignore error))
+              (write-error-reply "Unable to kill agent." connection))
+            (:no-error () (write-ack-reply connection)))
+          (write-error-reply "No such agent." connection)))))
+
 (defun serve-requests (connection)
   "Serves requests on CONNECTION."
   (send-hello connection)
@@ -118,7 +136,8 @@
                                  (#x30 'handle-spawn-request)
                                  (#x32 'handle-send-request)
                                  (#x34 'handle-link-request)
-                                 (#x36 'handle-unlink-request))
+                                 (#x36 'handle-unlink-request)
+                                 (#x38 'handle-exit-request))
                                  connection request)
                       (force-output connection))))))
 
@@ -245,3 +264,10 @@ and MAILBOX-SIZE."
     (with-connection (socket host node)
       (do-request (socket)
         (write-unlink-request remote-id local-id)))))
+
+(defun remote-exit (reason id)
+  "Kill remote agent by ID with REASON as the exit reason of agent."
+  (multiple-value-bind (host node) (decode-id id)
+    (with-connection (socket host node)
+      (do-request (socket)
+        (write-exit-request reason id)))))

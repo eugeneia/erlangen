@@ -101,7 +101,24 @@
              (error (error)
                (declare (ignore error)))
              (:no-error ()
-               (error "REMOTE-UNLINK succeeded with invalid id."))))
+               (error "REMOTE-UNLINK succeeded with invalid id.")))
+
+           ;; Test REMOTE-EXIT
+           (let* (kill-message
+                  (agent (find-agent id))
+                  (monitor (spawn (lambda ()
+                                    (link agent :monitor)
+                                    (setf kill-message (receive))))))
+             (unwind-protect
+                  (progn
+                    (remote-exit :foo id)
+                    (sleep 1)
+                    (destructuring-bind (killed-agent status . reason)
+                        kill-message
+                      (assert (eq agent killed-agent))
+                      (assert (eq status :exit))
+                      (assert (eq reason :foo))))
+               (ignore-errors (exit :kill monitor)))))
       (ignore-errors (exit :kill (find-agent id)))
       (ignore-errors (exit :kill register-agent))
       (ignore-errors (exit :kill node-server-agent))
