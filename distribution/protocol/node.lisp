@@ -147,7 +147,7 @@
     (unwind-protect (serve-requests connection)
       (close connection))))
 
-(defun make-node-server (&key (host "0.0.0.0"))
+(defun make-node-server (&key (host "localhost"))
   "Returns listener for node protocol on HOST and the listening port."
   (let ((socket (make-socket* :connect :passive
                               :local-host host
