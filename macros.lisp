@@ -23,7 +23,7 @@ optionally :RECEIVE clause."
 
 (defmacro select (&rest clauses
                   &aux (message-p-sym (gensym "message-p")))
-  "_clauses_::= 〚_normal-clause_\\*〛 \\[_receive-clause_]
+  "_clauses_::= _normal-clause_\\* \\[_receive-clause_]
 
    _normal-clause_::= {(}_poll-form_ _vars_ _body-form_\\*{)}
 

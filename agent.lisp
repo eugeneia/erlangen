@@ -14,7 +14,7 @@
 (defvar *agent-debug* nil
   "*Description:*
 
-   If {*agent-debug*} is _true_ when calling {spawn} _conditions_ of
+   If {*agent-debug*} is _true_ when calling {spawn}, _conditions_ of
    _type_ {serious-condition} will not be automatically handled for the
    spawned _agent_. The debugger will be entered so that the call stack
    can be inspected. Invoking the {exit} _restart_ will resume normal
@@ -22,11 +22,34 @@
    the fatal _condition_.")
 
 (defun agent ()
-  "Return calling agent."
+  "*Description:*
+
+   {agent} returns the _calling agent_."
   *agent*)
 
 (defstruct (agent (:constructor make-agent%))
-  "Agent structure."
+  "*Syntax:*
+
+   _agent_::= _structure_ | _keyword_ | _string_
+
+   *Description:*
+
+   An _agent_ can either be an _agent structure_, a _keyword_ denoting a
+   registered _agent_ or a _string_ denoting a _remote agent_.
+
+   A _remote agent_ is denoted by a _string_ of the form
+   {\"}_host_{/}_node_{/}_agent_{\"} where _host_ is the host name,
+   _node_ is the _node name_ and _agent_ is the _agent identifier_ of the
+   _remote agent_.
+
+   An _agent identifier_ is either a hexadecimal digit string denoting an
+   _anonymous agent_ or a colon followed by a _symbol name_ denoting a
+   _registered agent_. In the latter case, the _symbol name_ may not
+   contain the slash ({/}) character.
+
+   *Notes:*
+
+   Only _agent structures_ are of _type_ {agent}."
   (mailbox (error "MAILBOX must be supplied.") :type mailbox)
   (links nil :type list)
   (monitors nil :type list)
@@ -108,7 +131,7 @@
    If the _calling agent_ was killed by another _agent_ by use of {exit}
    a _serious-condition_ of _type_ {exit} is signaled.
 
-   If _timeout_ is supplied and exceeded and _error_ of _type_ {timeout}
+   If _timeout_ is supplied and exceeded an _error_ of _type_ {timeout}
    is signaled."
   (check-type *agent* agent)
   (flet ((receive-message ()

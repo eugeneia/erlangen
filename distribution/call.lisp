@@ -9,7 +9,7 @@
 (deftype call ()
   "*Syntax:*
 
-   _call_::= {(}_function_ 〚_argument_\\*〛{)}
+   _call_::= {(}_function_ _argument_\\*{)}
 
    *Arguments and Values:*
 
