@@ -75,9 +75,8 @@ for AGENT is created and returned."
   "Returns aid for agent registered for NAME. Signals an error if no aid
 could be derived from NAME."
   (let ((aid (prin1-to-string name)))
-    (if (valid-name-p aid)
-        aid
-        (error "~a is not a valid agent id." aid))))
+    (check-type aid name)
+    aid))
 
 (defun find-registered-agent (aid)
   "Returns registered agent by AID or nil if no such agent exists."
