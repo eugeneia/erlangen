@@ -30,7 +30,7 @@ not contain #\/)."
 
 (defun set-node-name (name)
   "Sets the node name to NAME."
-  (check-type name string)
+  (check-type name name)
   (with-write-lock (*node-name*/lock)
     (setf *node-name* name)))
 
