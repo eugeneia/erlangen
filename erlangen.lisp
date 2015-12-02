@@ -18,8 +18,9 @@
    If _message_ could not be delivered successfully an _error_ of _type_
    {send-error} is signaled."
   (etypecase agent
-    (agent (erlangen.agent:send message agent))
-    (symbol (erlangen.agent:send message (agent-by-name agent)))))
+    (erlangen.agent:agent (erlangen.agent:send message agent))
+    (keyword (erlangen.agent:send message (agent-by-name agent)))
+    (string (remote-send message agent))))
 
 (defun exit (&optional (reason :kill) (agent (agent)))
   "*Arguments and Values:*
@@ -38,10 +39,12 @@
    be delivered successfully an _error_ of _type_ {send-error} is
    signaled."
   (etypecase agent
-    (agent (erlangen.agent:exit reason agent))
-    (symbol (erlangen.agent:exit reason (agent-by-name agent)))))
+    (erlangen.agent:agent (erlangen.agent:exit reason agent))
+    (keyword (erlangen.agent:exit reason (agent-by-name agent)))
+    (string (remote-exit reason agent))))
 
-(defun spawn (function &key attach (mailbox-size *default-mailbox-size*))
+(defun spawn (function &key attach (mailbox-size *default-mailbox-size*)
+                            (host (host-name)) node)
   "*Arguments and Values:*
 
    _function_—a _function designator_ or a _call_.
@@ -63,11 +66,18 @@
 
    If _attach_ is {:link} or {:monitor} and {spawn} was not called by an
    _agent_ an _error_ of _type_ {type-error} is signaled."
-  (erlangen.agent:spawn (etypecase function
-                          (function function)
-                          (call (make-function function)))
-                        :attach attach
-                        :mailbox-size mailbox-size))
+  (if (null node)
+      (erlangen.agent:spawn (etypecase function
+                              (function function)
+                              (call (make-function function)))
+                            :attach attach
+                            :mailbox-size mailbox-size)
+      (remote-spawn host
+                    node
+                    function
+                    (and attach (agent-id (agent)))
+                    attach
+                    mailbox-size)))
 
 (defun link (agent &optional (mode :link))
   "*Arguments and Values:*
@@ -121,8 +131,9 @@
    If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
    is signaled."
   (etypecase agent
-    (agent (erlangen.agent:link agent mode))
-    (symbol (erlangen.agent:link (agent-by-name agent) mode))))
+    (erlangen.agent:agent (erlangen.agent:link agent mode))
+    (keyword (erlangen.agent:link (agent-by-name agent) mode))
+    (string (remote-link agent (agent-id agent) mode))))
 
 (defun unlink (agent)
   "*Arguments and Values:*
@@ -141,5 +152,6 @@
    If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
    is signaled."
   (etypecase agent
-    (agent (erlangen.agent:unlink agent))
-    (symbol (erlangen.agent:unlink (agent-by-name agent)))))
+    (erlangen.agent:agent (erlangen.agent:unlink agent))
+    (keyword (erlangen.agent:unlink (agent-by-name agent)))
+    (string (remote-unlink agent (agent-id (agent))))))

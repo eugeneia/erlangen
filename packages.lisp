@@ -158,7 +158,10 @@
         :erlangen.registry
         :erlangen.conditions
         :erlangen.macros
-        :erlangen.distribution.call)
+        :erlangen.distribution.call
+        :erlangen.distribution.id
+        :erlangen.distribution.protocol.node
+        :erlangen.distribution.protocol.port-mapper)
   ;; Some symbols with generic definitions (for local/registered/remote
   ;; agents) are redefined in this package and thus shadowed.
   (:shadow :send
