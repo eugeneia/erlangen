@@ -24,7 +24,7 @@
            (setq port-mapper (spawn `(port-mapper)))
            (sleep 1)
            (multiple-value-bind (node-server port)
-               (make-node-server :host (host-name))
+               (make-node-server)
              (setq node-server-agent (spawn node-server))
              (setq register-agent
                    (spawn `(register-node ,(node-name) ,port))))
@@ -119,6 +119,7 @@
                       (assert (eq status :exit))
                       (assert (eq reason :foo))))
                (ignore-errors (exit :kill monitor)))))
+
       (ignore-errors (exit :kill (find-agent id)))
       (ignore-errors (exit :kill register-agent))
       (ignore-errors (exit :kill node-server-agent))
