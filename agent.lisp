@@ -252,3 +252,34 @@ TO in MODE."
     (error "Can not unlink from self."))
   (remove-link agent *agent*)
   (remove-link *agent* agent))
+
+(defmacro root ((&key (mailbox-size '*default-mailbox-size*))
+                &body forms)
+  "*Arguments and Values:*
+
+   _mailbox-size_—a positive _integer_. The default is
+   {*default-mailbox-size*}.
+
+   _forms_—_forms_.
+
+   *Description:*
+
+   {root} evaluates _forms_ as if by an _agent_. The current _process_
+   “becomes” a _root agent_ for the duration of {root} which has a
+   mailbox capacity of _mailbox-size_. A _root agent_ can do anything a
+   regular _agent_ can do, with the exception that it will not notify or
+   kill linked _agents_ on exit.
+
+   *Examples:*
+
+   #code#
+   ;; Use ROOT to start your application:
+   (root ()
+     ;; Start your Erlangen application here. E.g:
+     ;; (spawn '(my-app) :attach :link)
+     ;; (receive)
+     (quit))
+   #"
+  `(let ((*agent* (make-agent%
+                   :mailbox (make-mailbox ,mailbox-size))))
+     ,@forms))

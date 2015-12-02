@@ -48,6 +48,7 @@
            :send
            :receive
            :exit
+           :root
            :*default-mailbox-size*
            :*agent-debug*))
 
@@ -183,5 +184,6 @@
            :unregister
            :registered
            :select
+           :root
            :*default-mailbox-size*
            :*agent-debug*))
