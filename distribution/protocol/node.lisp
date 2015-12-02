@@ -235,7 +235,7 @@ to NODE of HOST."
 (defun remote-spawn (host node call parent attach mailbox-size)
   "Spawns agent on remote NODE of HOST using CALL, PARENT, ATTACH mode
 and MAILBOX-SIZE."
-  (check-type call call)
+  (check-type call list)
   (check-type attach (member :link :monitor nil))
   (check-type mailbox-size (integer 1))
   (with-connection (socket host node)
