@@ -184,6 +184,7 @@
            :unregister
            :registered
            :select
+           :node
            :root
            :*default-mailbox-size*
            :*agent-debug*))

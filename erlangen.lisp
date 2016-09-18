@@ -155,3 +155,31 @@
     (erlangen.agent:agent (erlangen.agent:unlink agent))
     (keyword (erlangen.agent:unlink (agent-by-name agent)))
     (string (remote-unlink agent (agent-id (agent))))))
+
+(defun node (&key (host "localhost") name)
+  "*Arguments and Values:*
+
+   _host_—a _string_. The default is {\"localhost\"}.
+
+   _name_—a _string_. The default is a unique name.
+
+   *Description:*
+
+   {node} spawns the node protocol server to listen on a random free port
+   of _host_. It then registers its _name_ and listening port with the
+   port mapper. Once the node is registered, it is capable of
+   communicating with remote nodes.
+
+   *Examples:*
+
+   #code#
+   ;; Start talking to remote nodes:
+   (spawn '(node))
+   #"
+  (register :node)
+  (when name
+    (setf (node-name) name))
+  (multiple-value-bind (node-server port)
+      (make-node-server :host host)
+    (spawn node-server :attach :link)
+    (register-node (node-name) port)))
