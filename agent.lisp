@@ -1,27 +1,5 @@
 ;;;; Asynchronous agents (similar to Erlang processes).
 
-(defpackage erlangen.agent
-  (:documentation
-   "Node-local implementation of asynchronous _agents_ that can
-  communicate via message passing. The interface is mostly equivalent to
-  Erlang's processes except (1) without asynchronous exceptions and (2)
-  without a blocking version of {send}.")
-  (:use :cl
-        :erlangen.mailbox
-        :erlangen.conditions
-        :erlangen.algorithms
-        :bordeaux-threads)
-  (:shadowing-import-from :erlangen.conditions :timeout)
-  (:export :agent
-           :spawn
-           :link
-           :unlink
-           :send
-           :receive
-           :exit
-           :*default-mailbox-size*
-           :*agent-debug*))
-
 (in-package :erlangen.agent)
 
 (defvar *agent* nil
@@ -33,10 +11,10 @@
    {*default-mailbox-size*} is the default value of the {:mailbox-size}
    parameter to {spawn}.")
 
-(defparameter *agent-debug* nil
+(defvar *agent-debug* nil
   "*Description:*
 
-   If {*agent-debug*} is _true_ when calling {spawn} _conditions_ of
+   If {*agent-debug*} is _true_ when calling {spawn}, _conditions_ of
    _type_ {serious-condition} will not be automatically handled for the
    spawned _agent_. The debugger will be entered so that the call stack
    can be inspected. Invoking the {exit} _restart_ will resume normal
@@ -44,15 +22,38 @@
    the fatal _condition_.")
 
 (defun agent ()
-  "Return calling agent."
+  "*Description:*
+
+   {agent} returns the _calling agent_."
   *agent*)
 
 (defstruct (agent (:constructor make-agent%))
-  "Agent structure."
+  "*Syntax:*
+
+   _agent_::= _structure_ | _keyword_ | _string_
+
+   *Description:*
+
+   An _agent_ can either be an _agent structure_, a _keyword_ denoting a
+   registered _agent_ or a _string_ denoting a _remote agent_.
+
+   A _remote agent_ is denoted by a _string_ of the form
+   {\"}_host_{/}_node_{/}_agent_{\"} where _host_ is the host name,
+   _node_ is the _node name_ and _agent_ is the _agent identifier_ of the
+   _remote agent_.
+
+   An _agent identifier_ is either a hexadecimal digit string denoting an
+   _anonymous agent_ or a colon followed by a _symbol name_ denoting a
+   _registered agent_. In the latter case, the _symbol name_ may not
+   contain the slash ({/}) character.
+
+   *Notes:*
+
+   Only _agent structures_ are of _type_ {agent}."
   (mailbox (error "MAILBOX must be supplied.") :type mailbox)
   (links nil :type list)
   (monitors nil :type list)
-  (lock (make-lock "erlangen.agent-lock") :type lock))
+  (lock (make-lock "erlangen.agent-lock")))
 
 (defmethod print-object ((o agent) stream)
   (print-unreadable-object (o stream :type t :identity t)))
@@ -89,10 +90,12 @@
     (with-agent (*agent*)
       ;; Kill links.
       (loop for link in links do
-           (ignore-errors (exit reason link)))
+           (ignore-errors
+             (erlangen:exit reason link)))
       ;; Message monitors.
       (loop for monitor in monitors do
-           (ignore-errors (send `(,*agent* . ,reason) monitor))))))
+           (ignore-errors
+             (erlangen:send `(,*agent* . ,reason) monitor))))))
 
 (defun exit (reason agent)
   "Node-local EXIT. See ERLANGEN:EXIT for generic implementation."
@@ -102,8 +105,9 @@
              (error 'exit :reason reason))
       ;; We are killing another agent: send kill message, then close
       ;; agent's mailbox.
-      (progn (send `(:exit . ,reason) agent)
-             (close-mailbox (agent-mailbox agent)))))
+      (progn (send `(exit . ,reason) agent)
+             (close-mailbox (agent-mailbox agent))))
+  (values))
 
 (defun receive (&key timeout (poll-interval 1e-3))
   "*Arguments and Values:*
@@ -121,18 +125,18 @@
 
    *Exceptional Situations:*
 
-   If {receive} was not called by an _agent_ an _error_ of _type_
+   If {receive} is not called by an _agent_ an _error_ of _type_
    {type-error} is signaled.
 
    If the _calling agent_ was killed by another _agent_ by use of {exit}
    a _serious-condition_ of _type_ {exit} is signaled.
 
-   If _timeout_ was supplied and is exceeded and _error_ of _type_
-   {timeout} is signaled."
+   If _timeout_ is supplied and exceeded an _error_ of _type_ {timeout}
+   is signaled."
   (check-type *agent* agent)
   (flet ((receive-message ()
            (let ((message (dequeue-message (agent-mailbox *agent*))))
-             (if (and (consp message) (eq :exit (car message)))
+             (if (and (consp message) (eq 'exit (car message)))
                  (error 'exit :reason (cdr message))
                  message))))
     (if timeout
@@ -196,66 +200,86 @@ FUNCTION."
     (make-agent-thread function agent)
     agent))
 
-(defun spawn-attached (mode function mailbox-size)
+(defun spawn-attached (mode to function mailbox-size)
   "Spawn agent with MAILBOX-SIZE that will execute FUNCTION attached to
-the calling agent in MODE."
+TO in MODE."
   (let ((agent
          (ecase mode
            (:link
-            (make-agent function (list *agent*) nil mailbox-size))
+            (make-agent function (list to) nil mailbox-size))
            (:monitor
-            (make-agent function nil (list *agent*) mailbox-size)))))
-    (with-agent (*agent*)
-      (push agent (agent-links *agent*)))
+            (make-agent function nil (list to) mailbox-size)))))
+    ;; Add link to TO only if its an AGENT structure.
+    (typecase to
+      (agent (with-agent (to)
+               (push agent (agent-links to)))))
     agent))
 
-(defun spawn (function &key attach (mailbox-size *default-mailbox-size*))
-  "*Arguments and Values:*
+(defun spawn (function &key attach
+                            (to *agent*)
+                            (mailbox-size *default-mailbox-size*))
+  "Node-local SPAWN. See ERLANGEN:SPAWN for generic implementation."
+  (ecase attach
+    (:link     (spawn-attached :link to function mailbox-size))
+    (:monitor  (spawn-attached :monitor to function mailbox-size))
+    ((nil)     (make-agent function nil nil mailbox-size))))
 
-   _function_—a _function_.
+(defun add-link (agent mode to)
+  "Add link (TO) with MODE to AGENT."
+  (with-agent (agent)
+    (ecase mode
+      (:link    (pushnew to (agent-links agent)    :test 'equal))
+      (:monitor (pushnew to (agent-monitors agent) :test 'equal))))
+  (values))
 
-   _attach_—a _keyword_ or {nil}.
-
-   _mailbox-size_—a positive _unsigned integer_.
-
-   *Description:*
-
-   {spawn} starts and returns a new _agent_ with a mailbox capacity of
-   _mailbox-size_. If _attach_ is {:link} or {:monitor} the _calling
-   agent_ will be linked to the new _agent_ as if by {link} but before
-   the _agent_ is started.
-
-   *Exceptional Situations:*
-
-   If _attach_ is {:link} or {:monitor} and {spawn} was not called by an
-   _agent_ an _error_ of _type_ {type-error} is signaled."
-  (case attach
-    (:link     (check-type *agent* agent)
-               (spawn-attached :link function mailbox-size))
-    (:monitor  (check-type *agent* agent)
-               (spawn-attached :monitor function mailbox-size))
-    (otherwise (make-agent function nil nil mailbox-size))))
+(defun remove-link (agent to)
+  "Remove link (TO) from AGENT."
+  (with-agent (agent)
+    (setf #1=(agent-links agent)    (remove to #1# :test 'equal)
+          #2=(agent-monitors agent) (remove to #2# :test 'equal)))
+  (values))
 
 (defun link (agent mode)
   "Node-local LINK. See ERLANGEN:LINK for generic implementation."
-  (check-type *agent* agent)
   (when (eq agent *agent*)
     (error "Can not link to self."))
-  (with-agent (agent)
-    (ecase mode
-      (:link    (pushnew *agent* (agent-links agent)))
-      (:monitor (pushnew *agent* (agent-monitors agent)))))
-  (with-agent (*agent*)
-    (pushnew agent (agent-links *agent*))))
+  (add-link agent mode *agent*)
+  (add-link *agent* :link agent))
 
 (defun unlink (agent)
   "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
-  (check-type *agent* agent)
   (when (eq agent *agent*)
     (error "Can not unlink from self."))
-  (with-agent (agent)
-    (setf #1=(agent-links agent)    (remove *agent* #1#)
-          #2=(agent-monitors agent) (remove *agent* #2#)))
-  (with-agent (*agent*)
-    (setf #3=(agent-links *agent*)    (remove agent #3#)
-          #4=(agent-monitors *agent*) (remove agent #4#))))
+  (remove-link agent *agent*)
+  (remove-link *agent* agent))
+
+(defmacro root ((&key (mailbox-size '*default-mailbox-size*))
+                &body forms)
+  "*Arguments and Values:*
+
+   _mailbox-size_—a positive _integer_. The default is
+   {*default-mailbox-size*}.
+
+   _forms_—_forms_.
+
+   *Description:*
+
+   {root} evaluates _forms_ as if by an _agent_. The current _process_
+   “becomes” a _root agent_ for the duration of {root} which has a
+   mailbox capacity of _mailbox-size_. A _root agent_ can do anything a
+   regular _agent_ can do, with the exception that it will not notify or
+   kill linked _agents_ on exit.
+
+   *Examples:*
+
+   #code#
+   ;; Use ROOT to start your application:
+   (root ()
+     ;; Start your Erlangen application here. E.g:
+     ;; (spawn '(my-app) :attach :link)
+     ;; (receive)
+     (quit))
+   #"
+  `(let ((*agent* (make-agent%
+                   :mailbox (make-mailbox ,mailbox-size))))
+     ,@forms))

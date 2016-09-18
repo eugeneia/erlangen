@@ -1,16 +1,5 @@
 ;;;; Named agent registry.
 
-(defpackage erlangen.registry
-  (:documentation
-   "Node-local agent name registry.")
-  (:use :cl
-        :erlangen.agent
-        :bordeaux-threads)
-  (:export :register
-           :unregister
-           :registered
-           :agent-by-name))
-
 (in-package :erlangen.registry)
 
 (defvar *registry* (make-hash-table))
