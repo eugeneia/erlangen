@@ -48,7 +48,6 @@
            :send
            :receive
            :exit
-           :root
            :*default-mailbox-size*
            :*agent-debug*))
 
@@ -185,6 +184,5 @@
            :registered
            :select
            :node
-           :root
            :*default-mailbox-size*
            :*agent-debug*))
