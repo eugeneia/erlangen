@@ -28,14 +28,14 @@
   (mailbox (error "MAILBOX must be supplied.") :type mailbox)
   (links nil :type list)
   (monitors nil :type list)
-  (lock (make-lock "erlangen.agent-lock")))
+  (lock (make-lock "erlangen.agent")))
 
 (defmethod print-object ((o agent) stream)
   (print-unreadable-object (o stream :type t :identity t)))
 
 (defmacro with-agent ((agent) &body body)
   "Lock AGENT for BODY."
-  `(with-lock-held ((agent-lock ,agent))
+  `(with-lock-grabbed ((agent-lock ,agent))
      ,@body))
 
 (defvar *default-mailbox-size* 64
@@ -56,8 +56,8 @@
 
 (defvar *agent* (make-agent% :mailbox (make-mailbox *default-mailbox-size*))
   "Bound to current agent.")
-;; *agent* will be rebound by the “real” agents, but for the initial threads we
-;; create a “fake” agent structure with a mailbox. This way they can SPAWN,
+;; *agent* will be rebound by the “real” agents, but for the initial processes
+;; we create a “fake” agent structure with a mailbox. This way they can SPAWN,
 ;; SEND, and RECEIVE as if they were agents. See AGENT below.
 
 (defun agent ()
@@ -189,10 +189,9 @@
               :report exit-report :interactive exit-interactive
               (agent-notify-exit `(:exit . ,condition)))))))))
 
-(defun make-agent-thread (function agent)
-  "Spawn thread for FUNCTION with *AGENT* bound to AGENT."
-  (make-thread (make-agent-function function agent)
-               :name "erlangen.agent"))
+(defun make-agent-process (function agent)
+  "Spawn process for FUNCTION with *AGENT* bound to AGENT."
+  (process-run-function "erlangen.agent" (make-agent-function function agent)))
 
 (defun make-agent (function links monitors mailbox-size)
   "Create agent with LINKS, MONITORS and MAILBOX-SIZE that will execute
@@ -200,7 +199,7 @@ FUNCTION."
   (let ((agent (make-agent% :mailbox (make-mailbox mailbox-size)
                             :links links
                             :monitors monitors)))
-    (make-agent-thread function agent)
+    (make-agent-process function agent)
     agent))
 
 (defun spawn-attached (mode to function mailbox-size)

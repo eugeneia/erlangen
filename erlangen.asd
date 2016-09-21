@@ -2,7 +2,7 @@
 
 (defsystem erlangen
   :description
-  "Distributed asychronous message passing system for Common Lisp."
+  "Distributed asychronous message passing system for Clozure Common Lisp."
   :author "Max Rottenkolber <max@mr.gy>"
   :license "Not licensed"
   :components ((:file "packages")
@@ -64,7 +64,6 @@
                                    "distribution/protocol/port-mapper"
                                    "distribution/id")))
   :depends-on ("jpl-queues"
-               "bordeaux-threads"
                "trivial-utf-8"
                "fast-io"
                "cl-conspack"
