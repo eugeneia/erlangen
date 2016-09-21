@@ -2,31 +2,6 @@
 
 (in-package :erlangen.agent)
 
-(defvar *agent* nil
-  "Bound to current agent.")
-
-(defvar *default-mailbox-size* 64
-  "*Description:*
-
-   {*default-mailbox-size*} is the default value of the {:mailbox-size}
-   parameter to {spawn}.")
-
-(defvar *agent-debug* nil
-  "*Description:*
-
-   If {*agent-debug*} is _true_ when calling {spawn}, _conditions_ of
-   _type_ {serious-condition} will not be automatically handled for the
-   spawned _agent_. The debugger will be entered so that the call stack
-   can be inspected. Invoking the {exit} _restart_ will resume normal
-   operation except that the exit reason will be the _agent_ instead of
-   the fatal _condition_.")
-
-(defun agent ()
-  "*Description:*
-
-   {agent} returns the _calling agent_."
-  *agent*)
-
 (defstruct (agent (:constructor make-agent%))
   "*Syntax:*
 
@@ -62,6 +37,34 @@
   "Lock AGENT for BODY."
   `(with-lock-held ((agent-lock ,agent))
      ,@body))
+
+(defvar *default-mailbox-size* 64
+  "*Description:*
+
+   {*default-mailbox-size*} is the default value of the {:mailbox-size}
+   parameter to {spawn}.")
+
+(defvar *agent-debug* nil
+  "*Description:*
+
+   If {*agent-debug*} is _true_ when calling {spawn}, _conditions_ of
+   _type_ {serious-condition} will not be automatically handled for the
+   spawned _agent_. The debugger will be entered so that the call stack
+   can be inspected. Invoking the {exit} _restart_ will resume normal
+   operation except that the exit reason will be the _agent_ instead of
+   the fatal _condition_.")
+
+(defvar *agent* (make-agent% :mailbox (make-mailbox *default-mailbox-size*))
+  "Bound to current agent.")
+;; *agent* will be rebound by the “real” agents, but for the initial threads we
+;; create a “fake” agent structure with a mailbox. This way they can SPAWN,
+;; SEND, and RECEIVE as if they were agents. See AGENT below.
+
+(defun agent ()
+  "*Description:*
+
+   {agent} returns the _calling agent_."
+  *agent*)
 
 (define-condition exit (serious-condition)
   ((reason
