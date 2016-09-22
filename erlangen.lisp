@@ -1,5 +1,5 @@
 ;;;; Erlangen public API.
-     
+
 (in-package :erlangen)
 
 (defun send (message agent)
@@ -60,12 +60,7 @@
    _mailbox-size_. If _attach_ is {:link} or {:monitor} the _calling
    agent_ will be linked to the new _agent_ as if by {link} but before
    the _agent_ is started. Once the _agent_ is started it will execute
-   _function_.
-
-   *Exceptional Situations:*
-
-   If _attach_ is {:link} or {:monitor} and {spawn} was not called by an
-   _agent_ an _error_ of _type_ {type-error} is signaled."
+   _function_."
   (if (null node)
       (erlangen.agent:spawn (etypecase function
                               (function function)
@@ -125,9 +120,6 @@
 
    *Exceptional Situations:*
 
-   If {link} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled.
-
    If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
    is signaled."
   (etypecase agent
@@ -145,9 +137,6 @@
    {unlink} removes any _link_ between _agent_ and the _calling agent_.
 
    *Exceptional Situations:*
-
-   If {unlink} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled.
 
    If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
    is signaled."

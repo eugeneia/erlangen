@@ -47,16 +47,10 @@ optionally :RECEIVE clause."
    will evaluate each _body-form_ of the clause with the received message
    bound to the first _symbol_ in _vars_ and return their result. If no
    _receive-clause_ is supplied, {select} will silently discard incoming
-   messages.
-
-   *Exceptional Situations:*
-
-   If {select} is not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled."
+   messages."
   (multiple-value-bind (clauses receive-clause)
       (parse-select-clauses clauses)
     `(progn
-       (check-type *agent* agent)
        (with-poll-select 1e-2
          ,@clauses
          ,(if receive-clause
