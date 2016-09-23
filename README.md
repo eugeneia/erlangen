@@ -21,12 +21,13 @@ changes._
 
 ## Getting Started
 
-First, make sure you have [Clozure Common Lisp]() installed. Then clone the
-Erlangen repository to a place where [ASDF]() can find it. Also, make sure ASDF
+First, make sure you have [Clozure Common Lisp](http://ccl.clozure.com/)
+installed. Then clone the Erlangen repository to a place where
+[ASDF](https://common-lisp.net/project/asdf/) can find it. Also, make sure ASDF
 can find Erlangen’s dependencies.
 
-If you use [Quicklisp]() you can place Erlangen into the
-`quicklisp/local-projects` directory and have it fetch the dependencies
+If you use [Quicklisp](https://www.quicklisp.org/) you can place Erlangen into
+the `quicklisp/local-projects` directory and have it fetch the dependencies
 automatically.
 
 You can now start Clozure Common Lisp and load Erlangen:
@@ -158,9 +159,12 @@ make bin/erlangen-kernel
 bin/erlangen-kernel -n -e '(node :name "map-node")'
 ```
 
-For this example to work your hostname as reported by `machine-instance` must
-resolve to the local host. You might need to edit your `/etc/hosts` file and
-add a line like this one (your mileage may vary):
+Hint: if you use Emacs, you can start a new Erlangen instance with Slime with
+*C-u M-x slime RET /path/to/erlangen-kernel*.
+
+For the following example to work your hostname as reported by
+`machine-instance` must resolve to the local host. You might need to edit your
+`/etc/hosts` file and add a line like this one (your mileage may vary):
 
 ```
 127.0.0.1 <hostname>
@@ -182,6 +186,3 @@ What happened? We spawned an agent on the remote *map-node* instance to run
 `parallel-map`, and received its exit notification transparently over the
 network.
 
-(receive)
-       
- → #(3 5 7 9)
