@@ -63,13 +63,15 @@
    _function_."
   (if (null node)
       (erlangen.agent:spawn (etypecase function
-                              (function function)
+                              ((or function symbol) function)
                               (call (make-function function)))
                             :attach attach
                             :mailbox-size mailbox-size)
       (remote-spawn host
                     node
-                    function
+                    (if (symbolp function)
+                        (list function)
+                        function)
                     (and attach (agent-id (agent)))
                     attach
                     mailbox-size)))
