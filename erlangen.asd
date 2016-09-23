@@ -2,7 +2,7 @@
 
 (defsystem erlangen
   :description
-  "Distributed asychronous message passing system for Common Lisp."
+  "Distributed asychronous message passing system for Clozure Common Lisp."
   :author "Max Rottenkolber <max@mr.gy>"
   :license "Not licensed"
   :components ((:file "packages")
@@ -62,9 +62,12 @@
                       :depends-on ("agent"
                                    "distribution/protocol/node"
                                    "distribution/protocol/port-mapper"
-                                   "distribution/id")))
-  :depends-on ("jpl-queues"
-               "bordeaux-threads"
+                                   "distribution/id"))
+               ;; Examples
+               (:file "example/parallel-map"
+                      :depends-on ("erlangen")))
+  :depends-on ("trivia"
+               "jpl-queues"
                "trivial-utf-8"
                "fast-io"
                "cl-conspack"

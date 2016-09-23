@@ -2,31 +2,6 @@
 
 (in-package :erlangen.agent)
 
-(defvar *agent* nil
-  "Bound to current agent.")
-
-(defvar *default-mailbox-size* 64
-  "*Description:*
-
-   {*default-mailbox-size*} is the default value of the {:mailbox-size}
-   parameter to {spawn}.")
-
-(defvar *agent-debug* nil
-  "*Description:*
-
-   If {*agent-debug*} is _true_ when calling {spawn}, _conditions_ of
-   _type_ {serious-condition} will not be automatically handled for the
-   spawned _agent_. The debugger will be entered so that the call stack
-   can be inspected. Invoking the {exit} _restart_ will resume normal
-   operation except that the exit reason will be the _agent_ instead of
-   the fatal _condition_.")
-
-(defun agent ()
-  "*Description:*
-
-   {agent} returns the _calling agent_."
-  *agent*)
-
 (defstruct (agent (:constructor make-agent%))
   "*Syntax:*
 
@@ -53,15 +28,43 @@
   (mailbox (error "MAILBOX must be supplied.") :type mailbox)
   (links nil :type list)
   (monitors nil :type list)
-  (lock (make-lock "erlangen.agent-lock")))
+  (lock (make-lock "erlangen.agent")))
 
 (defmethod print-object ((o agent) stream)
   (print-unreadable-object (o stream :type t :identity t)))
 
 (defmacro with-agent ((agent) &body body)
   "Lock AGENT for BODY."
-  `(with-lock-held ((agent-lock ,agent))
+  `(with-lock-grabbed ((agent-lock ,agent))
      ,@body))
+
+(defvar *default-mailbox-size* 64
+  "*Description:*
+
+   {*default-mailbox-size*} is the default value of the {:mailbox-size}
+   parameter to {spawn}.")
+
+(defvar *agent-debug* nil
+  "*Description:*
+
+   If {*agent-debug*} is _true_ when calling {spawn}, _conditions_ of
+   _type_ {serious-condition} will not be automatically handled for the
+   spawned _agent_. The debugger will be entered so that the call stack
+   can be inspected. Invoking the {exit} _restart_ will resume normal
+   operation except that the exit reason will be the _agent_ instead of
+   the fatal _condition_.")
+
+(defvar *agent* (make-agent% :mailbox (make-mailbox *default-mailbox-size*))
+  "Bound to current agent.")
+;; *agent* will be rebound by the “real” agents, but for the initial processes
+;; we create a “fake” agent structure with a mailbox. This way they can SPAWN,
+;; SEND, and RECEIVE as if they were agents. See AGENT below.
+
+(defun agent ()
+  "*Description:*
+
+   {agent} returns the _calling agent_."
+  *agent*)
 
 (define-condition exit (serious-condition)
   ((reason
@@ -125,15 +128,11 @@
 
    *Exceptional Situations:*
 
-   If {receive} is not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled.
-
    If the _calling agent_ was killed by another _agent_ by use of {exit}
    a _serious-condition_ of _type_ {exit} is signaled.
 
    If _timeout_ is supplied and exceeded an _error_ of _type_ {timeout}
    is signaled."
-  (check-type *agent* agent)
   (flet ((receive-message ()
            (let ((message (dequeue-message (agent-mailbox *agent*))))
              (if (and (consp message) (eq 'exit (car message)))
@@ -186,10 +185,9 @@
               :report exit-report :interactive exit-interactive
               (agent-notify-exit `(:exit . ,condition)))))))))
 
-(defun make-agent-thread (function agent)
-  "Spawn thread for FUNCTION with *AGENT* bound to AGENT."
-  (make-thread (make-agent-function function agent)
-               :name "erlangen.agent"))
+(defun make-agent-process (function agent)
+  "Spawn process for FUNCTION with *AGENT* bound to AGENT."
+  (process-run-function "erlangen.agent" (make-agent-function function agent)))
 
 (defun make-agent (function links monitors mailbox-size)
   "Create agent with LINKS, MONITORS and MAILBOX-SIZE that will execute
@@ -197,7 +195,7 @@ FUNCTION."
   (let ((agent (make-agent% :mailbox (make-mailbox mailbox-size)
                             :links links
                             :monitors monitors)))
-    (make-agent-thread function agent)
+    (make-agent-process function agent)
     agent))
 
 (defun spawn-attached (mode to function mailbox-size)
@@ -252,34 +250,3 @@ TO in MODE."
     (error "Can not unlink from self."))
   (remove-link agent *agent*)
   (remove-link *agent* agent))
-
-(defmacro root ((&key (mailbox-size '*default-mailbox-size*))
-                &body forms)
-  "*Arguments and Values:*
-
-   _mailbox-size_—a positive _integer_. The default is
-   {*default-mailbox-size*}.
-
-   _forms_—_forms_.
-
-   *Description:*
-
-   {root} evaluates _forms_ as if by an _agent_. The current _process_
-   “becomes” a _root agent_ for the duration of {root} which has a
-   mailbox capacity of _mailbox-size_. A _root agent_ can do anything a
-   regular _agent_ can do, with the exception that it will not notify or
-   kill linked _agents_ on exit.
-
-   *Examples:*
-
-   #code#
-   ;; Use ROOT to start your application:
-   (root ()
-     ;; Start your Erlangen application here. E.g:
-     ;; (spawn '(my-app) :attach :link)
-     ;; (receive)
-     (quit))
-   #"
-  `(let ((*agent* (make-agent%
-                   :mailbox (make-mailbox ,mailbox-size))))
-     ,@forms))
