@@ -1,45 +1,45 @@
 (defpackage erlangen.examples
-  (:use :cl :erlangen :optima)
+  (:use :cl :erlangen :trivia)
   (:export :parallel-map))
 
 (in-package :erlangen.examples)
 
-(defun dice (n-chunks length)
-  (let ((n-chunks (min n-chunks length)))
-    (multiple-value-bind (chunk-size remainder) (floor length n-chunks)
-      (loop for end from chunk-size to (* chunk-size n-chunks) by chunk-size
-            for start = (- end chunk-size)
-         if (< (+ end remainder) length) collect
-           (cons start end)
-         else collect
-           (cons start (+ end remainder))))))
+;; (spawn '(parallel-map 1+ #(2 4 6 8 10 12 14) :level 3) :attach :monitor)
+;; (receive)
 
-(defun map-worker (function result-type idx)
+(defun worker ()
+  (ematch (receive)
+    ((and (type function) function)
+     (funcall function))))
+
+(defun map-chunk (function vector start end result-type)
   (lambda ()
-    (destructuring-bind (in start . end) (receive)
-      (let ((out (make-array (- end start) :element-type result-type)))
-        (loop for i from start below end do
-             (setf (aref out (- i start)) (funcall function (aref in i))))
-        (cons idx out)))))
+    (let ((results (make-array (- end start) :element-type result-type)))
+      (loop for i from start below end do
+           (setf (aref results (- i start))
+                 (funcall function (aref vector i))))
+      (values start end results))))
 
 (defun parallel-map (function vector &key (level 2) (result-type t))
-  (let* ((chunks (dice level (length vector)))
-         (workers (loop for idx from 1 to (length chunks) collect
-                       (spawn (map-worker function result-type idx)
-                              :attach :monitor))))
-    (loop for chunk in chunks
-          for worker in workers
-       do (send (cons vector chunk) worker))
-    (let ((results (loop for chunk in chunks collect
-                        (ematch (receive)
-                          ((list _ :ok result)
-                           result)
-                          ((list* agent :exit reason)
-                           (exit (cons agent reason)))))))
-      (apply 'concatenate 'vector
-             (mapcar 'cdr (sort results '< :key 'car))))))
+  (let* ((length (length vector))
+         (n-chunks (min level length))
+         (chunk-size (floor length n-chunks))
+         (workers (loop for i from 1 to n-chunks collect
+                       (spawn 'worker :attach :monitor))))
 
-;; (let ((pmap (spawn (parallel-map '+ ...) :attach :link)))
-;;   (destructuring-bind (from &rest result) (receive)
-;;     (assert (equal from pmap))
-;;     (print result)))
+    (loop for worker in workers
+          for chunk from 1
+          for start from 0 by chunk-size
+          for end = (if (< chunk n-chunks)
+                        (+ start chunk-size)
+                        length)
+       do (send (map-chunk function vector start end result-type) worker))
+    (loop with results = (make-array length :element-type result-type)
+          with n-results = 0 while (< n-results n-chunks) do
+         (match (receive)
+           ((list (type agent) :ok start end chunk-result)
+            (incf n-results)
+            (replace results chunk-result :start1 start :end1 end))
+           ((list (type agent) :exit reason)
+            (exit reason)))
+       finally (return results))))

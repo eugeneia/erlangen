@@ -62,8 +62,12 @@
                       :depends-on ("agent"
                                    "distribution/protocol/node"
                                    "distribution/protocol/port-mapper"
-                                   "distribution/id")))
-  :depends-on ("jpl-queues"
+                                   "distribution/id"))
+               ;; Examples
+               (:file "example/parallel-map"
+                      :depends-on ("erlangen")))
+  :depends-on ("trivia"
+               "jpl-queues"
                "trivial-utf-8"
                "fast-io"
                "cl-conspack"
