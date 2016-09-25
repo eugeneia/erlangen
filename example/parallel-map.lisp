@@ -35,8 +35,8 @@
                         length)
        do (send (map-chunk function vector start end result-type) worker))
     (loop with results = (make-array length :element-type result-type)
-          with n-results = 0 while (< n-results n-chunks) do
-         (match (receive)
+          for worker in workers do
+         (ematch (receive)
            ((list (type agent) :ok start end chunk-result)
             (incf n-results)
             (replace results chunk-result :start1 start :end1 end))
