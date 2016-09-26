@@ -127,7 +127,9 @@
   (etypecase agent
     (erlangen.agent:agent (erlangen.agent:link agent mode))
     (keyword (erlangen.agent:link (agent-by-name agent) mode))
-    (string (remote-link agent (agent-id (agent)) mode))))
+    (string (remote-link agent (agent-id (agent)) mode)
+            (erlangen.agent:link agent mode))))
+
 
 (defun unlink (agent)
   "*Arguments and Values:*
@@ -145,7 +147,8 @@
   (etypecase agent
     (erlangen.agent:agent (erlangen.agent:unlink agent))
     (keyword (erlangen.agent:unlink (agent-by-name agent)))
-    (string (remote-unlink agent (agent-id (agent))))))
+    (string (remote-unlink agent (agent-id (agent)))
+            (erlangen.agent:unlink agent))))
 
 (defun node (&key (host "localhost") name)
   "*Arguments and Values:*

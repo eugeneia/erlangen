@@ -241,12 +241,14 @@ TO in MODE."
   "Node-local LINK. See ERLANGEN:LINK for generic implementation."
   (when (eq agent *agent*)
     (error "Can not link to self."))
-  (add-link agent mode *agent*)
+  (typecase agent
+    (agent (add-link agent mode *agent*)))
   (add-link *agent* :link agent))
 
 (defun unlink (agent)
   "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
   (when (eq agent *agent*)
     (error "Can not unlink from self."))
-  (remove-link agent *agent*)
+  (typecase agent
+    (agent (remove-link agent *agent*)))
   (remove-link *agent* agent))
