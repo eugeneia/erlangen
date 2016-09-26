@@ -38,8 +38,7 @@
         :erlangen.conditions
         :erlangen.algorithms)
   (:shadowing-import-from :erlangen.conditions :timeout)
-  (:export :*agent*
-           :agent
+  (:export :agent
            :spawn
            :add-link
            :remove-link
