@@ -151,7 +151,7 @@
 
 (defpackage erlangen
   (:documentation
-   "Distributed asychronous message passing system for Clozure Common Lisp.")
+   "Distributed, asychronous message passing system for Clozure Common Lisp.")
   (:use :cl
         :erlangen.agent
         :erlangen.registry

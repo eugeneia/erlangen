@@ -2,7 +2,7 @@
 
 (defsystem erlangen
   :description
-  "Distributed asychronous message passing system for Clozure Common Lisp."
+  "Distributed, asychronous message passing system for Clozure Common Lisp."
   :author "Max Rottenkolber <max@mr.gy>"
   :license "Not licensed"
   :components ((:file "packages")

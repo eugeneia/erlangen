@@ -1,6 +1,6 @@
 # Erlangen
 
-Distributed asynchronous message passing system for Clozure Common Lisp.
+Distributed, asynchronous message passing system for Clozure Common Lisp.
 
 _Warning: Erlangen is immature, experimental software, subject to bugs and
 changes._
