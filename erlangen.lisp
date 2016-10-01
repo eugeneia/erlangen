@@ -107,7 +107,7 @@
 
    {(} _status_ {.} _values_ {)}
 
-   _status_::= {:ok}|{:exit}
+   _status_::= {:ok} | {:exit}
 
    The _status_ {:ok} indicates that the _agent_ exited normally, and
    _values_ will be a list of its _return values_.
