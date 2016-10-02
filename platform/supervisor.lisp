@@ -59,7 +59,7 @@
   (check-type period (integer (0)))
   (loop for (id function) in childspecs do
        (check-type id keyword)
-       (check-type function function))
+       (check-type function (or function call)))
   (lambda ()
     (let ((*maximum-intensity* (/ intensity period))
           (*restarts* 0)
