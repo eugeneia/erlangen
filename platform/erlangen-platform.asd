@@ -8,4 +8,4 @@
   :components ((:file "log")
                (:file "supervisor")
                (:file "server"))
-  :depends-on ("erlangen" "optima"))
+  :depends-on ("erlangen" "trivia"))

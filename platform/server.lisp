@@ -1,5 +1,5 @@
 (defpackage erlangen-platform.server
-  (:use :cl :erlangen :optima)
+  (:use :cl :erlangen :trivia)
   (:export :make-server
            :cast
            :call
