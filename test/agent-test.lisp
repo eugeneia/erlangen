@@ -15,7 +15,7 @@
                              &body body)
   `(let* ((,var (erlangen.agent::make-agent%
                  :mailbox (make-mailbox ,mailbox-size)))
-          (*agent* ,var))
+          (erlangen.agent::*agent* ,var))
      ,@body))
 
 (defun test-send-receive ()

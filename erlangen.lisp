@@ -1,5 +1,5 @@
 ;;;; Erlangen public API.
-     
+
 (in-package :erlangen)
 
 (defun send (message agent)
@@ -35,7 +35,7 @@
 
    *Exceptional Situations:*
 
-   If _agent_ is not the _calling agent_ and the _kill message_ could not
+   If _agent_ is not the _calling agent_, and the _kill message_ could not
    be delivered successfully an _error_ of _type_ {send-error} is
    signaled."
   (etypecase agent
@@ -60,21 +60,18 @@
    _mailbox-size_. If _attach_ is {:link} or {:monitor} the _calling
    agent_ will be linked to the new _agent_ as if by {link} but before
    the _agent_ is started. Once the _agent_ is started it will execute
-   _function_.
-
-   *Exceptional Situations:*
-
-   If _attach_ is {:link} or {:monitor} and {spawn} was not called by an
-   _agent_ an _error_ of _type_ {type-error} is signaled."
+   _function_."
   (if (null node)
       (erlangen.agent:spawn (etypecase function
-                              (function function)
+                              ((or function symbol) function)
                               (call (make-function function)))
                             :attach attach
                             :mailbox-size mailbox-size)
       (remote-spawn host
                     node
-                    function
+                    (if (symbolp function)
+                        (list function)
+                        function)
                     (and attach (agent-id (agent)))
                     attach
                     mailbox-size)))
@@ -94,10 +91,10 @@
    When the _calling agent_ exits it will attempt to kill _agent_ with
    the _exit reason_ of the _calling agent_.
 
-   When _agent_ exits and _mode_ is {:link} it will attempt to kill
+   When _agent_ exits, and _mode_ is {:link} it will attempt to kill the
    _calling agent_ with the _exit reason_ of _agent_.
 
-   When _agent_ exits and _mode_ is {:monitor} it will attempt to send an
+   When _agent_ exits, and _mode_ is {:monitor} it will attempt to send an
    _exit notification_ to the _calling agent_.
 
    An _exit notification_ is of the form
@@ -110,12 +107,14 @@
 
    {(} _status_ {.} _values_ {)}
 
-   A _status_ of {:ok} means that the _agent_ exited normally and
+   _status_::= {:ok} | {:exit}
+
+   The _status_ {:ok} indicates that the _agent_ exited normally, and
    _values_ will be a list of its _return values_.
 
-   A _status_ of {:exit} means that the _agent_ was either killed by
+   The _status_ {:exit} indicates that the _agent_ was either killed by
    {exit} or aborted because of an unhandled _condition_ of _type_
-   {serious-condition} and _values_ will be the _reason_ supplied to
+   {serious-condition}, and _values_ will be the _reason_ supplied to
    {exit} or the _condition object_.
 
    The attempts to kill or notify _linked agents_ will fail if the
@@ -125,15 +124,14 @@
 
    *Exceptional Situations:*
 
-   If {link} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled.
-
    If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
    is signaled."
   (etypecase agent
     (erlangen.agent:agent (erlangen.agent:link agent mode))
     (keyword (erlangen.agent:link (agent-by-name agent) mode))
-    (string (remote-link agent (agent-id agent) mode))))
+    (string (remote-link agent (agent-id (agent)) mode)
+            (erlangen.agent:link agent mode))))
+
 
 (defun unlink (agent)
   "*Arguments and Values:*
@@ -146,15 +144,13 @@
 
    *Exceptional Situations:*
 
-   If {unlink} was not called by an _agent_ an _error_ of _type_
-   {type-error} is signaled.
-
    If _agent_ is the _calling agent_ an _error_ of _type_ {simple-error}
    is signaled."
   (etypecase agent
     (erlangen.agent:agent (erlangen.agent:unlink agent))
     (keyword (erlangen.agent:unlink (agent-by-name agent)))
-    (string (remote-unlink agent (agent-id (agent))))))
+    (string (remote-unlink agent (agent-id (agent)))
+            (erlangen.agent:unlink agent))))
 
 (defun node (&key (host "localhost") name)
   "*Arguments and Values:*

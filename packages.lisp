@@ -3,8 +3,8 @@
 (defpackage erlangen.mailbox
   (:documentation "Agent mailbox implementation.")
   (:use :cl
-        :jpl-queues
-        :bordeaux-threads)
+        :ccl
+        :jpl-queues)
   (:export :mailbox
            :make-mailbox
            :enqueue-message
@@ -33,13 +33,12 @@
   Erlang's processes except (1) without asynchronous exceptions and (2)
   without a blocking version of {send}.")
   (:use :cl
+        :ccl
         :erlangen.mailbox
         :erlangen.conditions
-        :erlangen.algorithms
-        :bordeaux-threads)
+        :erlangen.algorithms)
   (:shadowing-import-from :erlangen.conditions :timeout)
-  (:export :*agent*
-           :agent
+  (:export :agent
            :spawn
            :add-link
            :remove-link
@@ -48,7 +47,6 @@
            :send
            :receive
            :exit
-           :root
            :*default-mailbox-size*
            :*agent-debug*))
 
@@ -56,8 +54,8 @@
   (:documentation
    "Node-local agent name registry.")
   (:use :cl
-        :erlangen.agent
-        :bordeaux-threads)
+        :ccl
+        :erlangen.agent)
   (:export :register
            :unregister
            :registered
@@ -153,7 +151,7 @@
 
 (defpackage erlangen
   (:documentation
-   "Distributed asychronous message passing system for Common Lisp.")
+   "Distributed, asychronous message passing system for Clozure Common Lisp.")
   (:use :cl
         :erlangen.agent
         :erlangen.registry
@@ -185,6 +183,5 @@
            :registered
            :select
            :node
-           :root
            :*default-mailbox-size*
            :*agent-debug*))
