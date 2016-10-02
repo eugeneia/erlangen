@@ -10,9 +10,7 @@
            :enqueue-message
            :empty-p
            :dequeue-message
-           :close-mailbox
-           :mailbox-full
-           :mailbox-closed))
+           :mailbox-full))
 
 (defpackage erlangen.conditions
   (:documentation "Generic conditions for Erlangen.")

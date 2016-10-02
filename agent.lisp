@@ -28,6 +28,7 @@
   (mailbox (error "MAILBOX must be supplied.") :type mailbox)
   (links nil :type list)
   (monitors nil :type list)
+  (exit nil)
   (lock (make-lock "erlangen.agent")))
 
 (defmethod print-object ((o agent) stream)
@@ -81,6 +82,8 @@
 
 (defun send (message agent)
   "Node-local SEND. See ERLANGEN:SEND for generic implementation."
+  (when (agent-exit agent)
+    (error 'send-error))
   (handler-case (enqueue-message message (agent-mailbox agent))
     (error (error)
       (declare (ignore error))
@@ -102,15 +105,13 @@
 
 (defun exit (reason agent)
   "Node-local EXIT. See ERLANGEN:EXIT for generic implementation."
-  (if (eq agent *agent*)
-      ;; We are killing ourself: close our mailbox, then signal EXIT.
-      (progn (close-mailbox (agent-mailbox *agent*))
-             (error 'exit :reason reason))
-      ;; We are killing another agent: send kill message, then close
-      ;; agent's mailbox.
-      (progn (send `(exit . ,reason) agent)
-             (close-mailbox (agent-mailbox agent))))
-  (values))
+  (with-agent (agent)
+    (if (agent-exit agent)
+        (error 'send-error)
+        (setf (agent-exit *agent*) reason)))
+  (when (eq agent *agent*)
+    ;; We are killing ourself: signal EXIT.
+    (error 'exit :reason reason)))
 
 (defun receive (&key timeout (poll-interval 1e-3))
   "*Arguments and Values:*
@@ -133,18 +134,15 @@
 
    If _timeout_ is supplied and exceeded an _error_ of _type_ {timeout}
    is signaled."
-  (flet ((receive-message ()
-           (let ((message (dequeue-message (agent-mailbox *agent*))))
-             (if (and (consp message) (eq 'exit (car message)))
-                 (error 'exit :reason (cdr message))
-                 message))))
-    (if timeout
-        (with-poll-timeout ((not (empty-p (agent-mailbox *agent*)))
-                            :timeout timeout
-                            :poll-interval poll-interval)
-          :succeed (receive-message)
-          :fail (error 'timeout))
-        (receive-message))))
+  (when #1=(agent-exit *agent*)
+    (error 'exit :reason #1#))
+  (if timeout
+      (with-poll-timeout ((not (empty-p (agent-mailbox *agent*)))
+                          :timeout timeout
+                          :poll-interval poll-interval)
+        :succeed (dequeue-message (agent-mailbox *agent*))
+        :fail (error 'timeout))
+      (dequeue-message (agent-mailbox *agent*))))
 
 (defun make-agent-function (function agent)
   "Wrap FUNCTION in ordered shutdown forms for AGENT."
@@ -154,6 +152,8 @@
              (handler-case (funcall function)
                ;; Agent exits normally.
                (:no-error (&rest values)
+                 (with-agent (*agent*)
+                   (setf (agent-exit *agent*) :ok))
                  (agent-notify-exit `(:ok . ,values)))
                ;; Agent is killed with reason.
                (exit (exit)
@@ -225,6 +225,8 @@ TO in MODE."
 (defun add-link (agent mode to)
   "Add link (TO) with MODE to AGENT."
   (with-agent (agent)
+    (when (agent-exit exit)
+      (error "Agent exited."))
     (ecase mode
       (:link    (pushnew to (agent-links agent)    :test 'equal))
       (:monitor (pushnew to (agent-monitors agent) :test 'equal))))
