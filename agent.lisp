@@ -98,7 +98,7 @@
       ;; Message monitors.
       (loop for monitor in monitors do
            (ignore-errors
-             (erlangen:send `(,*agent* . ,reason) monitor))))))
+             (erlangen:send `(notice ,*agent* . ,reason) monitor))))))
 
 (defun exit (reason agent)
   "Node-local EXIT. See ERLANGEN:EXIT for generic implementation."
@@ -135,9 +135,11 @@
    is signaled."
   (flet ((receive-message ()
            (let ((message (dequeue-message (agent-mailbox *agent*))))
-             (if (and (consp message) (eq 'exit (car message)))
-                 (error 'exit :reason (cdr message))
-                 message))))
+             (case (and (consp message) (car message))
+               (exit (error 'exit :reason (cdr message)))
+               (notice (remove-link *agent* (cadr message))
+                       (cdr message))
+               (otherwise message)))))
     (if timeout
         (with-poll-timeout ((not (empty-p (agent-mailbox *agent*)))
                             :timeout timeout
