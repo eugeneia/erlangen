@@ -8,9 +8,9 @@
 
 (in-package :erlangen.distribution.protocol.port-mapper-test)
 
-(defun run-tests (&key (registry-port 10001)
-                       (directory-port 20002))
-  (let (port-mapper node1)
+(defun run-tests (&key (registry-port 30003)   ; Use non-standard ports by
+                       (directory-port 40004)) ; default to avoid test failures
+  (let (port-mapper node1)                     ; due to slow reclamation.
     (unwind-protect
          (progn
            (setq port-mapper
