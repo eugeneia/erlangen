@@ -103,9 +103,8 @@
 (defun exit (reason agent)
   "Node-local EXIT. See ERLANGEN:EXIT for generic implementation."
   (if (eq agent *agent*)
-      ;; We are killing ourself: close our mailbox, then signal EXIT.
-      (progn (close-mailbox (agent-mailbox *agent*))
-             (error 'exit :reason reason))
+      ;; We are killing ourself: signal EXIT.
+      (error 'exit :reason reason)
       ;; We are killing another agent: send kill message, then close
       ;; agent's mailbox.
       (progn (send `(exit . ,reason) agent)
@@ -119,17 +118,15 @@
 
    *Description*:
 
-   {receive} returns the next message for the _calling agent_. If the
-   _mailbox_ of the _calling agent_ is empty, {receive} will block until
-   a message arrives.
+   {receive} returns the next message for the _calling agent_. If the message
+   is an _exit message_ the _calling agent_ exits immediately. If the _mailbox_
+   of the _calling agent_ is empty, {receive} will block until a message
+   arrives.
 
    If _timeout_ is supplied {receive} will block for at most _timeout_
    seconds and poll for a message every _poll-interval_ seconds.
 
    *Exceptional Situations:*
-
-   If the _calling agent_ was killed by another _agent_ by use of {exit}
-   a _serious-condition_ of _type_ {exit} is signaled.
 
    If _timeout_ is supplied and exceeded an _error_ of _type_ {timeout}
    is signaled."
@@ -153,7 +150,8 @@
   (let ((default-mailbox-size *default-mailbox-size*)
         (debug-p *agent-debug*))
     (flet ((run-agent ()
-             (handler-case (funcall function)
+             (handler-case (unwind-protect (funcall function)
+                             (close-mailbox (agent-mailbox agent)))
                ;; Agent exits normally.
                (:no-error (&rest values)
                  (agent-notify-exit `(:ok . ,values)))
