@@ -31,11 +31,13 @@
 
    *Description*:
 
-   {exit} kills _agent_ with _reason_ as the _exit reason_ of _agent_.
+   {exit} kills _agent_ with _reason_ as the _exit reason_. Subsequent attempts
+   to send messages to _agent_ will fail. If _agent_ is the _calling agent_ it
+   exits immediately, otherwise {exit} delivers an _exit message_ to _agent_.
 
    *Exceptional Situations:*
 
-   If _agent_ is not the _calling agent_, and the _kill message_ could not
+   If _agent_ is not the _calling agent_, and the _exit message_ could not
    be delivered successfully an _error_ of _type_ {send-error} is
    signaled."
   (etypecase agent
