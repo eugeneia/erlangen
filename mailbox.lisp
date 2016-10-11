@@ -7,8 +7,7 @@
   (queue (error "QUEUE must be supplied.") :type bounded-fifo-queue)
   (open? t :type symbol)
   (lock (make-lock "erlangen.mailbox"))
-  (enqueued (make-semaphore))
-  (dequeued (make-semaphore)))
+  (enqueued (make-semaphore)))
 
 (defun make-mailbox (size)
   "Return a new empty mailbox of SIZE."
@@ -30,7 +29,7 @@
 (defun enqueue-message (message mailbox)
   "Attempt to enqueue MESSAGE in MAILBOX. If MAILBOX is full signal an
 error of type MAILBOX-FULL."
-  (with-slots (queue open? lock enqueued dequeued) mailbox
+  (with-slots (queue open? lock enqueued) mailbox
     (with-lock-grabbed (lock)
       (cond ((not open?)
              (error 'mailbox-closed))
@@ -50,14 +49,13 @@ error of type MAILBOX-FULL."
 (defun dequeue-message (mailbox)
   "Return the next message in MAILBOX. If MAILBOX is empty blocks until a
 new message in enqueued."
-  (with-slots (queue lock enqueued dequeued) mailbox
+  (with-slots (queue lock enqueued) mailbox
     (with-lock-grabbed (lock)
       (loop while (empty? queue) do
            (release-lock lock)
            (unwind-protect (wait-on-semaphore enqueued)
              (grab-lock lock)))
-      (prog1 (dequeue queue)
-        (signal-semaphore dequeued)))))
+      (dequeue queue))))
 
 (defun close-mailbox (mailbox)
   "Close MAILBOX."
