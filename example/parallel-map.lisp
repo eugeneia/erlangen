@@ -38,7 +38,6 @@
           for worker in workers do
          (ematch (receive)
            ((list (type agent) :ok start end chunk-result)
-            (incf n-results)
             (replace results chunk-result :start1 start :end1 end))
            ((list (type agent) :exit reason)
             (exit reason)))
