@@ -1,11 +1,5 @@
 ;;;; Generic conditions.
 
-(defpackage erlangen.conditions
-  (:documentation "Generic conditions for Erlangen.")
-  (:use :cl)
-  (:export :send-error
-           :timeout))
-
 (in-package :erlangen.conditions)
 
 (define-condition send-error (error) ()
