@@ -6,10 +6,10 @@
   "Protocol version implemented by ERLANGEN.DISTRIBUTION.PROTOCOL.*; to
 be bumped in the event of changes to the protocol.")
 
-(defparameter *i/o-timeout* (* 10 1000) ; There is a bug in CCL (1.10?)
-                                        ; where TCP stream timeouts are
-                                        ; interpreted as millisecond
-                                        ; values.
+(defparameter *i/o-timeout* #-ccl-1.11 (* 10 1000) ; There is a bug in CCL
+                            #+ccl-1.11 10          ; (1.10?) where TCP stream
+                                                   ; timeouts are interpreted
+                                                   ; as millisecond values.
   "Default input/output timeout for TCP stream used throughout the
 protocol implementation.")
 
