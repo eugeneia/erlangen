@@ -69,14 +69,17 @@
                               (call (make-function function)))
                             :attach attach
                             :mailbox-size mailbox-size)
-      (remote-spawn host
-                    node
-                    (if (symbolp function)
-                        (list function)
-                        function)
-                    (and attach (agent-id (agent)))
-                    attach
-                    mailbox-size)))
+      (let ((agent (remote-spawn host
+                                 node
+                                 (if (symbolp function)
+                                     (list function)
+                                     function)
+                                 (and attach (agent-id (agent)))
+                                 attach
+                                 mailbox-size)))
+        (when attach
+          (erlangen.agent:link agent attach))
+        agent)))
 
 (defun link (agent &optional (mode :link))
   "*Arguments and Values:*
