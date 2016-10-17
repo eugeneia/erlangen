@@ -4,7 +4,7 @@
 
 (defvar *registry* (make-hash-table))
 
-(defvar *registry-lock* (make-lock "erlangen.registry"))
+(defvar *registry*/lock (make-read-write-lock))
 
 (defun register (name &optional (agent (agent)))
   "*Arguments and Values:*
@@ -23,7 +23,7 @@
    {simple-error} is signaled."
   (check-type name keyword)
   (check-type agent agent)
-  (with-lock-grabbed (*registry-lock*)
+  (with-write-lock (*registry*/lock)
     (if #1=(gethash name *registry*)
         (error "~a is already registered." name)
         (setf #1# agent))))
@@ -43,7 +43,7 @@
    If the _name_ is not associated with an _agent_ an _error_ of _type_
    {simple-error} is signaled."
   (check-type name keyword)
-  (with-lock-grabbed (*registry-lock*)
+  (with-write-lock (*registry*/lock)
     (or (remhash name *registry*)
         (error "Not registered: ~a" name))))
 
@@ -51,11 +51,11 @@
   "*Description*:
 
    {registered} returns a _list_ of names associated with _agents_."
-  (with-lock-grabbed (*registry-lock*)
+  (with-read-lock (*registry*/lock)
     (loop for name being the hash-keys of *registry* collect name)))
 
 (defun agent-by-name (name)
   "Return agent by NAME if registered, signal error otherwise."
-  (with-lock-grabbed (*registry-lock*)
+  (with-read-lock (*registry*/lock)
     (or (gethash name *registry*)
         (error "No such agent: ~a" name))))
