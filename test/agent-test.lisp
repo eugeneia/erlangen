@@ -57,10 +57,8 @@
         (:no-error ()
           (error "SEND to exited agent did not signal SEND-ERROR.")))
       (handler-case (exit :test agent)
-        (send-error (error)
-          error)
-        (:no-error ()
-          (error "EXIT to exited agent did not signal SEND-ERROR."))))))
+        (error (error)
+          (error "EXIT to exited agent signals: ~a" error))))))
 
 (defun run-tests ()
   (test-send-receive)
@@ -107,5 +105,5 @@
                       maximize seconds)))
       (format t "Sent ~f million messages in ~f seconds.~%"
               (/ total-messages 1e6) seconds)
-      (format t "Thats ~f messages per second.~%"
+      (format t "That’s ~f messages per second.~%"
               (/ total-messages seconds)))))

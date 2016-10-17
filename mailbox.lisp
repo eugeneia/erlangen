@@ -5,6 +5,7 @@
 (defstruct (mailbox (:constructor make-mailbox%))
   "Mailbox structure."
   (queue (error "QUEUE must be supplied.") :type bounded-fifo-queue)
+  (priority (error "PRIORITY must be supplied.") :type unbounded-fifo-queue)
   (open? t :type symbol)
   (lock (make-lock "erlangen.mailbox"))
   (enqueued (make-semaphore)))
@@ -12,7 +13,8 @@
 (defun make-mailbox (size)
   "Return a new empty mailbox of SIZE."
   (make-mailbox%
-   :queue (make-instance 'bounded-fifo-queue :capacity size)))
+   :queue (make-instance 'bounded-fifo-queue :capacity size)
+   :priority (make-instance 'unbounded-fifo-queue)))
 
 (define-condition mailbox-full (error) ()
   (:documentation
@@ -28,7 +30,8 @@
 
 (defun enqueue-message (message mailbox)
   "Attempt to enqueue MESSAGE in MAILBOX. If MAILBOX is full signal an
-error of type MAILBOX-FULL."
+error of type MAILBOX-FULL, if its closed signal an error of type
+MAILBOX-CLOSED."
   (with-slots (queue open? lock enqueued) mailbox
     (with-lock-grabbed (lock)
       (cond ((not open?)
@@ -40,22 +43,37 @@ error of type MAILBOX-FULL."
              (signal-semaphore enqueued)))))
   (values))
 
+(defun enqueue-priority (message mailbox)
+  "Attempt to enqueue priority MESSAGE in MAILBOX. Fails if MAILBOX is closed,
+but does *not* signal an error."
+  (with-slots (priority open? lock enqueued) mailbox
+    (with-lock-grabbed (lock)
+      (when open?
+        (enqueue message priority)
+        (signal-semaphore enqueued))))
+  (values))
+
 (defun empty-p (mailbox)
   "Predicate to test if MAILBOX is empty."
-  (with-slots (queue lock) mailbox
+  (with-slots (queue priority lock) mailbox
     (with-lock-grabbed (lock)
-      (empty? queue))))
+      (and (empty? queue) (empty? priority)))))
 
 (defun dequeue-message (mailbox)
   "Return the next message in MAILBOX. If MAILBOX is empty blocks until a
 new message in enqueued."
-  (with-slots (queue lock enqueued) mailbox
+  (with-slots (queue priority lock enqueued) mailbox
     (with-lock-grabbed (lock)
-      (loop while (empty? queue) do
+      (loop for queue-empty-p = (empty? queue)
+            for priority-empty-p = (empty? priority)
+         while (and queue-empty-p priority-empty-p) do
            (release-lock lock)
            (unwind-protect (wait-on-semaphore enqueued)
-             (grab-lock lock)))
-      (dequeue queue))))
+             (grab-lock lock))
+         finally
+           (return (if priority-empty-p
+                       (dequeue queue)
+                       (dequeue priority)))))))
 
 (defun close-mailbox (mailbox)
   "Close MAILBOX."

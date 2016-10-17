@@ -71,13 +71,9 @@
     :initform (error "Must supply REASON.")
     :initarg :reason
     :reader exit-reason
-    :documentation "Reson for exit."))
+    :documentation "Reason for EXIT."))
   (:documentation
-   "*Description:*
-
-    Describes a condition that denotes the exit of the _calling
-    agent_. The function {exit-reason} can be used to retrieve the exit
-    reason"))
+   "Conditions of type `exit' are signaled by agents when they EXIT."))
 
 (defun send (message agent)
   "Node-local SEND. See ERLANGEN:SEND for generic implementation."
@@ -87,27 +83,14 @@
       (error 'send-error)))
   (values))
 
-(defun agent-notify-exit (reason)
-  "Kill links and message monitors of *AGENT* due to exit for REASON."
-  (with-slots (links monitors lock) *agent*
-    (with-agent (*agent*)
-      ;; Kill links.
-      (loop for link in links do
-           (ignore-errors
-             (erlangen:exit reason link)))
-      ;; Message monitors.
-      (loop for monitor in monitors do
-           (ignore-errors
-             (erlangen:send `(notice ,*agent* . ,reason) monitor))))))
-
 (defun exit (reason agent)
   "Node-local EXIT. See ERLANGEN:EXIT for generic implementation."
   (if (eq agent *agent*)
       ;; We are killing ourself: signal EXIT.
       (error 'exit :reason reason)
-      ;; We are killing another agent: send kill message, then close
+      ;; We are killing another agent: enqueue EXIT message, then close
       ;; agent's mailbox.
-      (progn (send `(exit . ,reason) agent)
+      (progn (enqueue-priority `(exit . ,reason) (agent-mailbox agent))
              (close-mailbox (agent-mailbox agent))))
   (values))
 
@@ -132,11 +115,9 @@
    is signaled."
   (flet ((receive-message ()
            (let ((message (dequeue-message (agent-mailbox *agent*))))
-             (case (and (consp message) (car message))
-               (exit (error 'exit :reason (cdr message)))
-               (notice (remove-link *agent* (cadr message))
-                       (cdr message))
-               (otherwise message)))))
+             (if (and (consp message) (eq 'exit (car message)))
+                 (error 'exit :reason (cdr message))
+                 message))))
     (if timeout
         (with-poll-timeout ((not (empty-p (agent-mailbox *agent*)))
                             :timeout timeout
@@ -144,6 +125,58 @@
           :succeed (receive-message)
           :fail (error 'timeout))
         (receive-message))))
+
+(defun add-link (agent mode to)
+  "Add link (TO) with MODE to AGENT."
+  (with-agent (agent)
+    (ecase mode
+      (:link    (pushnew to (agent-links agent)    :test 'equal))
+      (:monitor (pushnew to (agent-monitors agent) :test 'equal)))))
+
+(defun remove-link (agent to &aux removed-p)
+  "Remove link (TO) from AGENT."
+  (flet ((equal! (x y)
+           (when (equal x y)
+             (setf removed-p t))))
+    (with-agent (agent)
+      (setf #1=(agent-links agent)    (remove to #1# :test #'equal!)
+            #2=(agent-monitors agent) (remove to #2# :test #'equal!))))
+  removed-p)
+
+(defun link (agent mode)
+  "Node-local LINK. See ERLANGEN:LINK for generic implementation."
+  (when (eq agent *agent*)
+    (error "Can not link to self."))
+  (typecase agent
+    (agent (add-link agent mode *agent*)))
+  (add-link *agent* :link agent)
+  (values))
+
+(defun unlink (agent)
+  "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
+  (when (eq agent *agent*)
+    (error "Can not unlink from self."))
+  (typecase agent
+    (agent (remove-link agent *agent*)))
+  (remove-link *agent* agent)
+  (values))
+
+(defun notify (exited reason agent)
+  "Node-local NOTIFY. See ERLANGEN:NOTIFY for generic implementation."
+  (when (remove-link agent exited)
+    (enqueue-priority `(,exited . ,reason) (agent-mailbox agent)))
+  (values))
+
+(defun agent-notify-exit (reason)
+  "Kill links and message monitors of *AGENT* due to exit for REASON."
+  (with-slots (links monitors lock) *agent*
+    (with-agent (*agent*)
+      ;; Kill links.
+      (loop for link in links do
+           (erlangen:exit reason link))
+      ;; Message monitors.
+      (loop for monitor in monitors do
+           (erlangen::notify *agent* reason monitor)))))
 
 (defun make-agent-function (function agent)
   "Wrap FUNCTION in ordered shutdown forms for AGENT."
@@ -221,34 +254,3 @@ TO in MODE."
     (:link     (spawn-attached :link to function mailbox-size))
     (:monitor  (spawn-attached :monitor to function mailbox-size))
     ((nil)     (make-agent function nil nil mailbox-size))))
-
-(defun add-link (agent mode to)
-  "Add link (TO) with MODE to AGENT."
-  (with-agent (agent)
-    (ecase mode
-      (:link    (pushnew to (agent-links agent)    :test 'equal))
-      (:monitor (pushnew to (agent-monitors agent) :test 'equal))))
-  (values))
-
-(defun remove-link (agent to)
-  "Remove link (TO) from AGENT."
-  (with-agent (agent)
-    (setf #1=(agent-links agent)    (remove to #1# :test 'equal)
-          #2=(agent-monitors agent) (remove to #2# :test 'equal)))
-  (values))
-
-(defun link (agent mode)
-  "Node-local LINK. See ERLANGEN:LINK for generic implementation."
-  (when (eq agent *agent*)
-    (error "Can not link to self."))
-  (typecase agent
-    (agent (add-link agent mode *agent*)))
-  (add-link *agent* :link agent))
-
-(defun unlink (agent)
-  "Node-local UNLINK. See ERLANGEN:UNLINK for generic implementation."
-  (when (eq agent *agent*)
-    (error "Can not unlink from self."))
-  (typecase agent
-    (agent (remove-link agent *agent*)))
-  (remove-link *agent* agent))

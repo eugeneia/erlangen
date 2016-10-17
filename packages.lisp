@@ -8,6 +8,7 @@
   (:export :mailbox
            :make-mailbox
            :enqueue-message
+           :enqueue-priority
            :empty-p
            :dequeue-message
            :close-mailbox
@@ -47,6 +48,7 @@
            :send
            :receive
            :exit
+           :notify
            :*default-mailbox-size*
            :*agent-debug*))
 
@@ -92,16 +94,16 @@
   (:use :cl
         :ccl
         :erlangen.distribution.protocol.buffers)
-  (:export :*i/o-timeout*
-           :make-socket*
-           :with-socket
-           :do-request
-           :send-hello
+  (:export :send-hello
            :assert-protocol-version
            :write-error-reply
            :read-error-reply
            :write-ack-reply
-           :read-ack-reply))
+           :read-ack-reply
+           :protocol-error
+           :make-socket*
+           :with-socket
+           :do-request))
 
 (defpackage erlangen.distribution.protocol.port-mapper
   (:documentation "Port mapper portion of the distribution protocol.")
@@ -147,7 +149,8 @@
            :remote-send
            :remote-link
            :remote-unlink
-           :remote-exit))
+           :remote-exit
+           :remote-notify))
 
 (defpackage erlangen
   (:documentation
@@ -165,6 +168,7 @@
   ;; agents) are redefined in this package and thus shadowed.
   (:shadow :send
            :exit
+           :notify
            :link
            :unlink
            :spawn)

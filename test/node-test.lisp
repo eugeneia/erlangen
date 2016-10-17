@@ -83,11 +83,7 @@
                (declare (ignore error)))
              (:no-error ()
                (error "REMOTE-LINK succeeded with invalid mode.")))
-           (handler-case (remote-link (agent-id :invalid) "foo" :link)
-             (error (error)
-               (declare (ignore error)))
-             (:no-error ()
-               (error "REMOTE-LINK succeeded with invalid id.")))
+           (remote-link (agent-id :invalid) "foo" :link)
 
            ;; Test REMOTE-UNLINK
            (remote-unlink id "foo")
@@ -97,11 +93,7 @@
            (assert (equal (erlangen.agent::agent-monitors
                            (find-agent id))
                           '()))
-           (handler-case (remote-unlink (agent-id :invalid) "foo")
-             (error (error)
-               (declare (ignore error)))
-             (:no-error ()
-               (error "REMOTE-UNLINK succeeded with invalid id.")))
+           (remote-unlink (agent-id :invalid) "foo")
 
            ;; Test REMOTE-EXIT
            (let* (kill-message
@@ -118,10 +110,10 @@
                       (assert (eq agent killed-agent))
                       (assert (eq status :exit))
                       (assert (eq reason :foo))))
-               (ignore-errors (exit :kill monitor)))))
+               (exit :kill monitor))))
 
-      (ignore-errors (exit :kill (find-agent id)))
-      (ignore-errors (exit :kill register-agent))
-      (ignore-errors (exit :kill node-server-agent))
-      (ignore-errors (exit :kill port-mapper))
+      (exit :kill (find-agent id))
+      (exit :kill register-agent)
+      (exit :kill node-server-agent)
+      (exit :kill port-mapper)
       (clear-connections))))

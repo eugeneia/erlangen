@@ -48,8 +48,8 @@ not contain #\/)."
       (incf *agent-counter*))))
 
 (defun decode-id (id)
-  "Decodes uniqe agent ID. Returns host name, node name and aid."
-  (apply 'values (split-sequence #\/ id)))
+  "Decodes unique agent ID. Returns host name, node name, and aid."
+  (values-list (split-sequence #\/ id)))
 
 (defvar *agent<->aid*/lock (make-lock))
 (defvar *agent->aid* (make-hash-table :test 'eq :weak :key)
@@ -103,8 +103,8 @@ name."
 (defun find-agent (id)
   "Returns agent by ID."
   (multiple-value-bind (host node aid) (decode-id id)
-    (when (and (string= host (host-name))
-               (string= node (node-name)))
+    (when (and (equal host (host-name))
+               (equal node (node-name)))
       (multiple-value-bind (type aid) (decode-aid aid)
         (values (ecase type
                   (:anonymous  (find-anonymous-agent aid))

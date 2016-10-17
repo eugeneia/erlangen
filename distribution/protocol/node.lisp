@@ -47,10 +47,18 @@
   (remote-agent string) (local-agent string))
 
 ;; EXIT-REQUEST is sent by a node to issue an EXIT. It contains the exit
-;; reason and the target agent. The remote node must either kill the
-;; target agent accordingly by sending an ACK-REPLY or indicate failure
-;; to do so by sending an ERROR-REPLY.
+;; reason and the target agent. The remote node must kill the target
+;; agent—given it exists and has not exited already—and acknowledge the
+;; request by sending an ACK-REPLY.
 (define-message #x38 exit-request (reason value) (agent string))
+
+;; NOTIFY-REQUEST is sent by a node to issue an exit notification. It
+;; contains the remote agent, its exit reason, and and the target agent.
+;; The remote node must notify the target agent accordingly—given it
+;; exists and has not exited—and acknowledge the request by sending an
+;; ACK-REPLY.
+(define-message #x40 notify-request
+  (remote-agent string) (reason value) (local-agent string))
 
 (defun handle-spawn-request (connection request)
   "Handles REQUEST of type SPAWN-REQUEST on CONNECTION."
@@ -88,15 +96,8 @@
       (read-link-request request)
     (let ((agent (find-agent local-agent)))
       (if agent
-          (handler-case (add-link agent mode remote-agent)
-            (type-error (error)
-              (declare (ignore error))
-              (write-error-reply "Invalid request." connection))
-            (error (error)
-              (declare (ignore error))
-              (write-error-reply "Unable to link." connection))
-            (:no-error ()
-              (write-ack-reply connection)))
+          (progn (add-link agent mode remote-agent)
+                 (write-ack-reply connection))
           (write-error-reply "No such agent." connection)))))
 
 (defun handle-unlink-request (connection request)
@@ -104,26 +105,26 @@
   (multiple-value-bind (local-agent remote-agent)
       (read-unlink-request request)
     (let ((agent (find-agent local-agent)))
-      (if agent
-          (handler-case (remove-link agent remote-agent)
-            (error (error)
-              (declare (ignore error))
-              (write-error-reply "Unable to link." connection))
-            (:no-error ()
-              (write-ack-reply connection)))
-          (write-error-reply "No such agent." connection)))))
+      (when agent
+        (remove-link agent remote-agent))))
+  (write-ack-reply connection))
 
 (defun handle-exit-request (connection request)
   "Handles REQUEST of type EXIT-REQUEST on CONNECTION."
   (multiple-value-bind (reason agent-id) (read-exit-request request)
     (let ((agent (find-agent agent-id)))
-      (if agent
-          (handler-case (exit reason agent)
-            (error (error)
-              (declare (ignore error))
-              (write-error-reply "Unable to kill agent." connection))
-            (:no-error () (write-ack-reply connection)))
-          (write-error-reply "No such agent." connection)))))
+      (when agent
+        (exit reason agent))))
+  (write-ack-reply connection))
+
+(defun handle-notify-request (connection request)
+  "Handles REQUEST of type NOTIFY-REQUEST on CONNECTION."
+  (multiple-value-bind (remote-agent reason local-agent)
+      (read-notify-request request)
+    (let ((agent (find-agent local-agent)))
+      (when agent
+        (notify remote-agent reason agent))
+      (write-ack-reply connection))))
 
 (defun serve-requests (connection)
   "Serves requests on CONNECTION."
@@ -137,7 +138,8 @@
                                  (#x32 'handle-send-request)
                                  (#x34 'handle-link-request)
                                  (#x36 'handle-unlink-request)
-                                 (#x38 'handle-exit-request))
+                                 (#x38 'handle-exit-request)
+                                 (#x40 'handle-notify-request))
                                  connection request)
                       (force-output connection))))))
 
@@ -161,76 +163,90 @@
                               :attach :monitor))))))
             (local-port socket))))
 
-;; The local node opens and reuses one connection per remote node.
+;; The local node opens and reuses one `connection' per remote node.
 (defvar *remote-connections*/lock (make-lock))
 (defvar *remote-connections* (make-hash-table :test 'equal)
   "Holds established connections to remote nodes.")
 
-(defun make-connection (nid)
-  "Returns a connection to remote node by NID of the form
-(HOST-NAME . NODE-NAME). `Connection' is a cons containing a socket
-connected to the remote node and the connection lock."
-  (destructuring-bind (host . node) nid
-    (cons (make-socket* :remote-host host
-                        :remote-port (query-node-port host node)
-                        :keepalive t)
-          (make-lock))))
+(defstruct connection
+  "A `connection' contains a SOCKET and a LOCK, as well as a list of DEFERRED
+requests."
+  socket
+  (deferred nil :type list)
+  (deferred-tail nil :type (or cons null))
+  (lock (make-lock) :type lock))
+
+(defun get-connection (host node &aux (nid (cons host node)))
+  "Returns the connection object for NODE on HOST."
+  (with-lock-grabbed (*remote-connections*/lock)
+    (or #1=(gethash nid *remote-connections*)
+        (setf #1# (make-connection)))))
+
+(defun defer-request (request connection)
+  "Defer REQUEST for CONNECTION."
+  (with-slots (deferred deferred-tail) connection
+    (setf deferred-tail
+          (if (null deferred-tail)
+              (setf deferred #1=(list request))
+              (setf (cdr deferred-tail) #1#)))))
+
+(defun replay-deferred (connection)
+  "Replay DEFERRED requests onto CONNECTION, and remove successful requests
+  from DEFERRED."
+  (with-slots (socket deferred deferred-tail) connection
+    (loop while deferred do
+         (funcall (first deferred) socket)
+         (pop deferred))
+    (setf deferred-tail nil)))
+
+(defun establish-connection (connection host node)
+  "Establishes CONNECTION to remote NODE on HOST."
+  (setf (connection-socket connection)
+        (make-socket* :remote-host host
+                      :remote-port (query-node-port host node)
+                      :keepalive t))
+  (assert-protocol-version (connection-socket connection))
+  (replay-deferred connection))
 
 (defun close-connection (connection)
   "Closes CONNECTION."
-  (close (car connection) :abort t)
-  (setf (car connection) nil))
-
-(defun establish-connection (nid)
-  "Establishes a new connection to remote node by NID. On failure the
-connection is closed and an error is signaled."
-  (let ((connection (setf (gethash nid *remote-connections*)
-                          (make-connection nid))))
-    (grab-lock (cdr connection))
-    (handler-case (assert-protocol-version (car connection))
-      (error (error)
-        (close-connection connection)
-        (error error))
-      (:no-error ()
-        connection))))
-
-(defun get-established-connection (nid)
-  "Returns the establed connection to remote node by NID if it exists."
-  (let ((connection (gethash nid *remote-connections*)))
-    (when connection
-      (grab-lock (cdr connection))
-      (if (not (null (car connection)))
-          connection
-          (release-lock (cdr connection))))))
-
-(defun get-connection (nid)
-  "Returns the existing established connection to node by NID if it
-exists. Otherwise establishes and returns a new connection."
-  (with-lock-grabbed (*remote-connections*/lock)
-    (or (get-established-connection nid)
-        (establish-connection nid))))
+  (when #1=(connection-socket connection)
+    (close #1# :abort t)
+    (setf #1# nil)))
 
 (defun clear-connections ()
   "Closes all remote connections."
   (with-lock-grabbed (*remote-connections*/lock)
     (maphash (lambda (nid connection)
-               (with-lock-grabbed ((cdr connection))
-                 (when (car connection)
-                   (close-connection connection))
+               (with-lock-grabbed ((connection-lock connection))
+                 (close-connection connection)
                  (remhash nid *remote-connections*)))
              *remote-connections*)))
 
-(defmacro with-connection ((var host node) &body body
-                           &aux (connection-sym (gensym "connection")))
-  "Evaluate BODY with VAR bound to a socket of an established connection
-to NODE of HOST."
-  `(let* ((,connection-sym (get-connection (cons ,host ,node)))
-          (,var (car ,connection-sym)))
-     (unwind-protect (handler-case (progn ,@body)
-                       (error (error)
-                         (close-connection ,connection-sym)
-                         (error error)))
-       (release-lock (cdr ,connection-sym)))))
+(defmacro with-connection ((var host node &key persist-p) &body request
+                           &aux (host-sym (gensym "host"))
+                                (node-sym (gensym "node"))
+                                (connection-sym (gensym "connection"))
+                                (error-sym (gensym "error")))
+  "Evaluate REQUEST with VAR bound to a socket of an established `connection'
+to NODE of HOST. If PERSIST-P is non-nil REQUEST will be persistent."
+  `(let* ((,host-sym ,host)
+          (,node-sym ,node)
+          (,connection-sym (get-connection ,host-sym ,node-sym)))
+     (or (with-lock-grabbed ((connection-lock ,connection-sym))
+           (handler-case (with-slots ((,var socket)) ,connection-sym
+                           (when (null ,var)
+                             (establish-connection
+                              ,connection-sym ,host-sym ,node-sym))
+                           ,@request)
+             (error (,error-sym)
+               (declare (ignorable ,error-sym))
+               ,(when persist-p
+                  `(defer-request (lambda (,var) ,@request) ,connection-sym))
+               (close-connection ,connection-sym)
+               ,(unless persist-p
+                  `(error ,error-sym)))))
+         (values))))
 
 (defun remote-spawn (host node call parent attach mailbox-size)
   "Spawns agent on remote NODE of HOST using CALL, PARENT, ATTACH mode
@@ -245,29 +261,44 @@ and MAILBOX-SIZE."
 
 (defun remote-send (message id)
   "Sends MESSAGE to remote agent by ID."
-  (multiple-value-bind (host node) (decode-id id)
-    (with-connection (socket host node)
-      (do-request (socket)
-        (write-send-request message id)))))
+  (let ((error (multiple-value-bind (host node) (decode-id id)
+                 (with-connection (socket host node)
+                   (handler-case (do-request (socket)
+                                   (write-send-request message id))
+                     (protocol-error (error) error))))))
+    (when error
+      (error error))))
 
 (defun remote-link (remote-id local-id mode)
   "Links remote agent by REMOTE-ID to agent by LOCAL-ID using MODE."
   (check-type mode (member :link :monitor))
   (multiple-value-bind (host node) (decode-id remote-id)
-    (with-connection (socket host node)
-      (do-request (socket)
-        (write-link-request remote-id local-id mode)))))
+    (with-connection (socket host node :persist-p t)
+      (handler-case (do-request (socket)
+                      (write-link-request remote-id local-id mode))
+        (protocol-error (error)
+          (let ((agent (find-agent local-id)))
+            (when agent
+              (case mode
+                (:link (exit `(,remote-id . ,error) agent))
+                (:monitor (notify remote-id error agent))))))))))
 
 (defun remote-unlink (remote-id local-id)
   "Unlinks remote agent by REMOTE-ID from agent by LOCAL-ID."
   (multiple-value-bind (host node) (decode-id remote-id)
-    (with-connection (socket host node)
+    (with-connection (socket host node :persist-p t)
       (do-request (socket)
         (write-unlink-request remote-id local-id)))))
 
 (defun remote-exit (reason id)
   "Kill remote agent by ID with REASON as the exit reason of agent."
   (multiple-value-bind (host node) (decode-id id)
-    (with-connection (socket host node)
+    (with-connection (socket host node :persist-p t)
       (do-request (socket)
         (write-exit-request reason id)))))
+
+(defun remote-notify (local-id reason id)
+  (multiple-value-bind (host node) (decode-id id)
+    (with-connection (socket host node :persist-p t)
+      (do-request (socket)
+        (write-notify-request local-id reason id)))))
