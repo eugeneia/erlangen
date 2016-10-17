@@ -164,7 +164,7 @@
             (local-port socket))))
 
 ;; The local node opens and reuses one `connection' per remote node.
-(defvar *remote-connections*/lock (make-lock))
+(defvar *remote-connections*/lock (make-lock "…node::*remote-connections*"))
 (defvar *remote-connections* (make-hash-table :test 'equal)
   "Holds established connections to remote nodes.")
 
@@ -174,7 +174,7 @@ requests."
   socket
   (deferred nil :type list)
   (deferred-tail nil :type (or cons null))
-  (lock (make-lock) :type lock))
+  (lock (make-lock "…node::connection") :type lock))
 
 (defun get-connection (host node &aux (nid (cons host node)))
   "Returns the connection object for NODE on HOST."
