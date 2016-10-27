@@ -11,24 +11,29 @@
 
 (in-package :erlangen.distribution.protocol.node)
 
-;; SPAWN-REQUEST is sent by a node to issue a SPAWN. It contains a CALL
-;; (see ERLANGEN.DISTRIBUTION.CALL), the parent agent identifier, the
-;; attach mode (:LINK, :ATTACH or NIL) and the mailbox capacity of the
-;; agent to create. The remote node must either spawn the agent
-;; accordingly and acknowlege the request by sending a SPAWN-REPLY or
-;; indicate failure to do so by sending an ERROR-REPLY.
+;; ID-REQUEST is sent by a node to allocate an `agent identifier'.
 ;;
-;; SPAWN-REPLY is sent by nodes to acknowledge a SPAWN-REQUEST. It
-;; contains the agent identifier of the spawned agent.
-(define-message #x30 spawn-request
-  (call value) (parent string) (attach value) (mailbox-size integer))
-(define-message #x31 spawn-reply (agent string))
+;; ID-REPLY is sent by nodes to acknowledge an ID-REQUEST. It contains a free
+;; agent identifier, to be used for a SPAWN-REQUEST.
+;;
+;; SPAWN-REQUEST is sent by a node to issue a SPAWN. It contains an ID obtained
+;; from an ID-REQUEST, a CALL (see ERLANGEN.DISTRIBUTION.CALL), the parent
+;; agent identifier, the attach mode (:LINK, :ATTACH or NIL), and the mailbox
+;; capacity of the agent to create. The remote node must either spawn the agent
+;; accordingly and acknowlege the request by sending an ACK-REPLY or indicate
+;; failure to do so by sending an ERROR-REPLY.
+(define-message #x30 id-request)
+(define-message #x31 id-reply
+  (id string))
+(define-message #x32 spawn-request
+  (call value) (parent string) (attach value) (mailbox-size integer)
+  (id string))
 
 ;; SEND-REQUEST is sent by a node to issue a SEND. It contains the
 ;; message to be delivered and the target agent. The remote node must
 ;; either acknowledge the delivery of the message by sending an ACK-REPLY
 ;; or indicate failure to do so by sending an ERROR-REPLY.
-(define-message #x32 send-request (message value) (agent string))
+(define-message #x34 send-request (message value) (agent string))
 
 ;; LINK-REQUEST is sent by a node to issue a LINK. It contains a remote
 ;; agent identifier and a local agent identifier as well as the desired
@@ -36,46 +41,50 @@
 ;; specified agents accordingly and acknowlege the request by sending an
 ;; ACK-REPLY or indicate failure to do so by sending an ERROR-REPLY.
 ;;
-;; UNLINK-REQUEST is sent by a node to issue an UNLINK. It contains a
-;; remote agent identifier and a local agent identifier. The remote node
-;; must either unlink the specified agents accordingly and acknowlege the
-;; request by sending an ACK-REPLY or indicate failure to do so by
-;; sending an ERROR-REPLY.
-(define-message #x34 link-request
+;; UNLINK-REQUEST is sent by a node to issue an UNLINK. It contains a remote
+;; agent identifier and a local agent identifier. The remote node must unlink
+;; the remote agent from the local agent—given it exists—and acknowlege the
+;; request by sending an ACK-REPLY.
+(define-message #x36 link-request
   (remote-agent string) (local-agent string) (mode value))
-(define-message #x36 unlink-request
+(define-message #x38 unlink-request
   (remote-agent string) (local-agent string))
 
 ;; EXIT-REQUEST is sent by a node to issue an EXIT. It contains the exit
 ;; reason and the target agent. The remote node must kill the target
 ;; agent—given it exists and has not exited already—and acknowledge the
 ;; request by sending an ACK-REPLY.
-(define-message #x38 exit-request (reason value) (agent string))
+(define-message #x40 exit-request (reason value) (agent string))
 
 ;; NOTIFY-REQUEST is sent by a node to issue an exit notification. It
 ;; contains the remote agent, its exit reason, and and the target agent.
 ;; The remote node must notify the target agent accordingly—given it
 ;; exists and has not exited—and acknowledge the request by sending an
 ;; ACK-REPLY.
-(define-message #x40 notify-request
+(define-message #x42 notify-request
   (remote-agent string) (reason value) (local-agent string))
+
+(defun handle-id-request (connection request)
+  "Handles REQUEST of type ID-REQUEST on CONNECTION."
+  (declare (ignore request))
+  (write-id-reply (agent-id) connection))
 
 (defun handle-spawn-request (connection request)
   "Handles REQUEST of type SPAWN-REQUEST on CONNECTION."
-  (multiple-value-bind (call parent attach mailbox-size)
+  (multiple-value-bind (call parent attach mailbox-size id)
       (read-spawn-request request)
-    (handler-case (spawn (make-function call)
-                         :attach attach
-                         :to parent
-                         :mailbox-size mailbox-size)
-      (type-error (error)
-        (declare (ignore error))
-        (write-error-reply "Invalid request." connection))
-      (error (error)
-        (declare (ignore error))
-        (write-error-reply "Unable to spawn agent." connection))
-      (:no-error (agent)
-        (write-spawn-reply (agent-id agent) connection)))))
+    (if (find-agent id)
+        (write-ack-reply connection)
+        (handler-case (spawn (make-function call)
+                             :attach attach
+                             :to parent
+                             :mailbox-size mailbox-size)
+          (error (error)
+            (declare (ignore error))
+            (write-error-reply "Invalid request." connection))
+          (:no-error (agent)
+            (claim-id id agent)
+            (write-ack-reply connection))))))
 
 (defun handle-send-request (connection request)
   "Handles REQUEST of type SEND-REQUEST on CONNECTION."
@@ -134,12 +143,13 @@
                     (multiple-value-bind (type request)
                         (read-message connection)
                       (funcall (ecase type
-                                 (#x30 'handle-spawn-request)
-                                 (#x32 'handle-send-request)
-                                 (#x34 'handle-link-request)
-                                 (#x36 'handle-unlink-request)
-                                 (#x38 'handle-exit-request)
-                                 (#x40 'handle-notify-request))
+                                 (#x30 'handle-id-request)
+                                 (#x32 'handle-spawn-request)
+                                 (#x34 'handle-send-request)
+                                 (#x36 'handle-link-request)
+                                 (#x38 'handle-unlink-request)
+                                 (#x40 'handle-exit-request)
+                                 (#x42 'handle-notify-request))
                                  connection request)
                       (force-output connection))))))
 
@@ -223,13 +233,18 @@ requests."
                  (remhash nid *remote-connections*)))
              *remote-connections*)))
 
-(defmacro with-connection ((var host node &key persist-p) &body request
+(defmacro with-connection ((var host node &key persist-p)
+                           request
+                           &optional protocol-error &rest error-handler
                            &aux (host-sym (gensym "host"))
                                 (node-sym (gensym "node"))
                                 (connection-sym (gensym "connection"))
                                 (error-sym (gensym "error")))
   "Evaluate REQUEST with VAR bound to a socket of an established `connection'
-to NODE of HOST. If PERSIST-P is non-nil REQUEST will be persistent."
+to NODE of HOST. If PERSIST-P is non-nil REQUEST will be persistent. If
+PROTOCOL-ERROR is :protocol-error, then ERROR-HANDLER for errors of type
+`protocol-error' will be established for REQUEST."
+  (check-type protocol-error (or (eql :protocol-error) null))
   `(let* ((,host-sym ,host)
           (,node-sym ,node)
           (,connection-sym (get-connection ,host-sym ,node-sym)))
@@ -238,11 +253,13 @@ to NODE of HOST. If PERSIST-P is non-nil REQUEST will be persistent."
                            (when (null ,var)
                              (establish-connection
                               ,connection-sym ,host-sym ,node-sym))
-                           ,@request)
+                           ,request)
+             ,@(when protocol-error
+                 `((protocol-error ,@error-handler)))
              (error (,error-sym)
                (declare (ignorable ,error-sym))
                ,(when persist-p
-                  `(defer-request (lambda (,var) ,@request) ,connection-sym))
+                  `(defer-request (lambda (,var) ,request) ,connection-sym))
                (close-connection ,connection-sym)
                ,(unless persist-p
                   `(error ,error-sym)))))
@@ -251,22 +268,28 @@ to NODE of HOST. If PERSIST-P is non-nil REQUEST will be persistent."
 (defun remote-spawn (host node call parent attach mailbox-size)
   "Spawns agent on remote NODE of HOST using CALL, PARENT, ATTACH mode
 and MAILBOX-SIZE."
-  (check-type call list)
+  (check-type call call)
   (check-type attach (member :link :monitor nil))
   (check-type mailbox-size (integer 1))
-  (with-connection (socket host node)
-    (do-request (socket)
-      (write-spawn-request call parent attach mailbox-size)
-      (#x31 read-spawn-reply))))
+  (let (id)
+    (with-connection (socket host node :persist-p t)
+      (progn (unless id
+               (setf id (do-request (socket)
+                          (write-id-request)
+                          (#x31 read-id-reply))))
+             (do-request (socket)
+               (write-spawn-request call parent attach mailbox-size id))
+             id)
+      :protocol-error (error)
+      (error error))))
 
 (defun remote-send (message id)
   "Sends MESSAGE to remote agent by ID."
-  (let ((error (multiple-value-bind (host node) (decode-id id)
-                 (with-connection (socket host node)
-                   (handler-case (do-request (socket)
-                                   (write-send-request message id))
-                     (protocol-error (error) error))))))
-    (when error
+  (multiple-value-bind (host node) (decode-id id)
+    (with-connection (socket host node)
+      (do-request (socket)
+        (write-send-request message id))
+      :protocol-error (error)
       (error error))))
 
 (defun remote-link (remote-id local-id mode)
@@ -274,14 +297,14 @@ and MAILBOX-SIZE."
   (check-type mode (member :link :monitor))
   (multiple-value-bind (host node) (decode-id remote-id)
     (with-connection (socket host node :persist-p t)
-      (handler-case (do-request (socket)
-                      (write-link-request remote-id local-id mode))
-        (protocol-error (error)
-          (let ((agent (find-agent local-id)))
-            (when agent
-              (case mode
-                (:link (exit `(,remote-id . ,error) agent))
-                (:monitor (notify remote-id error agent))))))))))
+      (do-request (socket)
+        (write-link-request remote-id local-id mode))
+      :protocol-error (error)
+      (let ((agent (find-agent local-id)))
+        (when agent
+          (case mode
+            (:link (exit `(,remote-id . ,error) agent))
+            (:monitor (notify remote-id error agent))))))))
 
 (defun remote-unlink (remote-id local-id)
   "Unlinks remote agent by REMOTE-ID from agent by LOCAL-ID."

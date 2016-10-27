@@ -46,9 +46,8 @@
                           (host-name) (node-name) '(invalid)
                           "nil" nil 1)
              (error (error)
-               (declare (ignore error)))
-             (:no-error ()
-               (error "REMOTE-SPAWN succeeded with invalid call.")))
+               (declare (ignore error))
+               (error "REMOTE-SPAWN failed with invalid call.")))
 
            ;; Test REMOTE-SEND
            (remote-send "hello" id)

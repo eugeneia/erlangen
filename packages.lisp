@@ -130,7 +130,8 @@
            :node-name
            :decode-id
            :agent-id
-           :find-agent))
+           :find-agent
+           :claim-id))
 
 (defpackage erlangen.distribution.protocol.node
   (:documentation "Node portion of the distribution protocol.")

@@ -4,7 +4,7 @@
 
 (defun callable-p (call)
   "Predicate to check if CALL is callable."
-  (not (null (ignore-errors (symbol-function (first call))))))
+  (symbolp (first call)))
 
 (deftype call ()
   "*Syntax:*
