@@ -43,11 +43,14 @@
              (:no-error ()
                (error "REMOTE-SPAWN succeeded with invalid mode.")))
            (handler-case (remote-spawn
-                          (host-name) (node-name) '(invalid)
+                          (host-name) (node-name) '(42)
                           "nil" nil 1)
              (error (error)
-               (declare (ignore error))
-               (error "REMOTE-SPAWN failed with invalid call.")))
+               (declare (ignore error)))
+             (:no-error ()
+               (error "REMOTE-SPAWN succeeded with invalid call.")))
+           (remote-spawn (host-name) (node-name) '(not-bound)
+                         "nil" nil 1)
 
            ;; Test REMOTE-SEND
            (remote-send "hello" id)
@@ -83,6 +86,29 @@
              (:no-error ()
                (error "REMOTE-LINK succeeded with invalid mode.")))
            (remote-link (agent-id :invalid) "foo" :link)
+           (let (exit-notice
+                 (invalid-id (agent-id :invalid)))
+             (spawn (lambda ()
+                      (link invalid-id :monitor)
+                      (setf exit-notice (receive))))
+             (sleep 1)
+             (destructuring-bind (id status . reason) exit-notice
+               (assert (equal id invalid-id))
+               (assert (eq status :exit))
+               (check-type reason error)))
+           (let (exit-notice
+                 (invalid-id (agent-id :invalid))
+                 (linked (spawn (lambda () (receive)))))
+             (spawn (lambda ()
+                      (link linked :monitor)
+                      (setf exit-notice (receive))))
+             (remote-link invalid-id (agent-id linked) :link)
+             (sleep 1)
+             (destructuring-bind (agent status id . reason) exit-notice
+               (assert (equal agent linked))
+               (assert (eq status :exit))
+               (assert (equal id invalid-id))
+               (check-type reason error)))
 
            ;; Test REMOTE-UNLINK
            (remote-unlink id "foo")
@@ -95,21 +121,23 @@
            (remote-unlink (agent-id :invalid) "foo")
 
            ;; Test REMOTE-EXIT
-           (let* (kill-message
+           (let* (exit-notice
                   (agent (find-agent id))
                   (monitor (spawn (lambda ()
                                     (link agent :monitor)
-                                    (setf kill-message (receive))))))
+                                    (setf exit-notice (receive))))))
              (unwind-protect
                   (progn
                     (remote-exit :foo id)
                     (sleep 1)
                     (destructuring-bind (killed-agent status . reason)
-                        kill-message
+                        exit-notice
                       (assert (eq agent killed-agent))
                       (assert (eq status :exit))
                       (assert (eq reason :foo))))
-               (exit :kill monitor))))
+               (exit :kill monitor)))
+           (remote-exit :bar id)
+           (remote-exit :bar (agent-id :invalid)))
 
       (exit :kill (find-agent id))
       (exit :kill register-agent)
