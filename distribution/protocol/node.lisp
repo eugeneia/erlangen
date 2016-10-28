@@ -304,7 +304,7 @@ and MAILBOX-SIZE."
         (when agent
           (case mode
             (:link (exit `(,remote-id . ,error) agent))
-            (:monitor (notify remote-id error agent))))))))
+            (:monitor (notify remote-id `(:exit . ,error) agent))))))))
 
 (defun remote-unlink (remote-id local-id)
   "Unlinks remote agent by REMOTE-ID from agent by LOCAL-ID."

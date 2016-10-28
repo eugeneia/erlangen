@@ -122,13 +122,7 @@ for ERLANGEN.AGENT."
 
    An _exit notification_ is of the form
 
-   {(} _agent_ {.} _exit-reason_ {)}
-
-   where _exit-reason_ is the _exit reason_ of _agent_.
-
-   An _exit reason_ has the following from:
-
-   {(} _status_ {.} _values_ {)}
+   {(} _agent_ _status_ . _values_ {)}
 
    _status_::= {:ok} | {:exit}
 
@@ -137,8 +131,8 @@ for ERLANGEN.AGENT."
 
    The _status_ {:exit} indicates that the _agent_ was either killed by
    {exit} or aborted because of an unhandled _condition_ of _type_
-   {serious-condition}, and _values_ will be the _reason_ supplied to
-   {exit} or the _condition object_.
+   {serious-condition}, and _values_ will be the _exit reason_ supplied to
+   {exit}, or the _condition object_.
 
    *Exceptional Situations:*
 
