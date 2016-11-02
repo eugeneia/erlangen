@@ -36,25 +36,19 @@ not contain #\/)."
 
 (defsetf node-name set-node-name)
 
-(defvar *agent-counter*/lock (make-lock "…id::*agent-counter*"))
-(defvar *agent-counter* 0
+(defvar *aid-counter*/lock (make-lock "…id::*aid-counter*"))
+(defvar *aid-counter* 0
   "Counter used for agent id generation.")
 
 (defun gen-aid ()
   "Generates and returns unique identifier for node-local agent."
-  (with-lock-grabbed (*agent-counter*/lock)
-    (prog1 (format nil "~x" *agent-counter*)
-      (incf *agent-counter*))))
+  (format nil "~x" (with-lock-grabbed (*aid-counter*/lock)
+                     (prog1 *aid-counter*
+                       (incf *aid-counter*)))))
 
-(defun generated-aid-p (aid)
-  "Predicate to test if AID has been generated."
-  (< (parse-integer aid :radix 16 :junk-allowed nil)
-     (with-lock-grabbed (*agent-counter*/lock)
-       *agent-counter*)))
-
-(deftype aid ()
-  "Type of generated agent IDs."
-  '(and string (satisfies generated-aid-p)))
+(defun aid-value (aid)
+  "Return numerical value for AID."
+  (parse-integer aid :radix 16 :junk-allowed nil))
 
 (defvar *agent<->aid*/lock (make-read-write-lock))
 (defvar *agent->aid* (make-hash-table :test 'eq :weak :key)
@@ -91,15 +85,15 @@ could be derived from NAME."
   "Returns registered agent by AID or nil if no such agent exists."
   (ignore-errors (agent-by-name (find-symbol aid :keyword))))
 
-(defun agent-id (&optional agent)
-  "Return id for AGENT. If AGENT is nil return free id."
-  (format nil "~a/~a/~a"
-          (host-name)
-          (node-name)
-          (etypecase agent
-            (agent   (intern-anonymous-aid agent))
-            (keyword (registry-aid agent))
-            (null    (gen-aid)))))
+(defun format-id (aid)
+  "Return id for AID."
+  (format nil "~a/~a/~a" (host-name) (node-name) aid))
+
+(defun agent-id (agent)
+  "Return id for AGENT."
+  (format-id (etypecase agent
+               (agent   (intern-anonymous-aid agent))
+               (keyword (registry-aid agent)))))
 
 (defun decode-id (id)
   "Decodes unique agent ID. Returns host name, node name, and aid."
@@ -122,13 +116,43 @@ name."
                   (:anonymous  (find-anonymous-agent aid))
                   (:registered (find-registered-agent aid))))))))
 
-(defun claim-id (id agent)
-  "Claim ID for AGENT."
+(defvar *reserved*/lock (make-lock "…id:*reserved-ids*"))
+(defvar *reserved* nil
+  "List of `aid' reservations")
+
+
+(defun reserve-id ()
+  "Reserve a free id."
+  (let* ((aid (gen-aid))
+         (n (aid-value aid)))
+    (with-lock-grabbed (*reserved*/lock)
+      (push n *reserved*))
+    (format-id aid)))
+
+(defun claim-id (id)
+  "Claim reserved ID. Removes ID from the list of reserved ids, and return T if
+ID was removed and NIL otherwise. At the same, CLAIM-ID acts as a sort of
+garbace collector. Heuristically stale reservations are removed from the list
+of reserved ids, and if a stale reservation is claimed an error is signaled."
   (multiple-value-bind (host node aid) (decode-id id)
     (assert (equal host (host-name)))
     (assert (equal node (node-name)))
-    (check-type aid aid)
-    (assert (null (find-anonymous-agent aid)))
+    (let ((n (aid-value aid))
+          (found-p nil))
+      (labels ((stale-p (n)
+                 (< (+ n 1000000) *aid-counter*))
+               (delete-p (reserved)
+                 (cond ((= reserved n) (setf found-p t))
+                       ((stale-p reserved) t))))
+        (with-lock-grabbed (*reserved*/lock)
+          (setf *reserved* (delete-if #'delete-p *reserved*)))
+        (assert (not (stale-p n))))
+      found-p)))
+
+(defun bind-id (id agent)
+  "Bind aid in ID to AGENT."
+  (multiple-value-bind (host node aid) (decode-id id)
+    (declare (ignore host node))
     (bind-aid aid agent)))
 
 ;; Specialized cl-conspack encoding/decoding for AGENT structures. Values

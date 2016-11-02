@@ -131,7 +131,9 @@
            :decode-id
            :agent-id
            :find-agent
-           :claim-id))
+           :reserve-id
+           :claim-id
+           :bind-id))
 
 (defpackage erlangen.distribution.protocol.node
   (:documentation "Node portion of the distribution protocol.")

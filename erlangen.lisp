@@ -80,7 +80,12 @@ for ERLANGEN.AGENT."
    _function_.
 
    If _node_ is _non-nil_ the _agent_ is started on _node_ of _host_ instead of
-   the local node."
+   the local node.
+
+   *Exceptional Situations:*
+
+   If {spawn} fails to start the _agent_ an an _error_ of _type_ {error} is
+   signaled."
   (if (null node)
       (erlangen.agent:spawn (etypecase function
                               ((or function symbol) function)
