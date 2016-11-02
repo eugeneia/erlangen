@@ -54,22 +54,14 @@
 
            ;; Test REMOTE-SEND
            (remote-send "hello" id)
+           (sleep 1)
            (assert (equal '("hello") (test-messages)) ()
                    "REMOTE-SEND failed.")
-           (handler-case
-               (let ((id (remote-spawn (host-name) (node-name) '(sleep 2)
-                                       "nil" nil 1)))
-                 (remote-send "hello" id)
-                 (remote-send "hello2" id))
-             (error (error)
-               (declare (ignore error)))
-             (:no-error ()
-               (error "REMOTE-SEND succeeded even though message was not delivered.")))
-           (handler-case (remote-send "hello" (agent-id :invalid))
-             (error (error)
-               (declare (ignore error)))
-             (:no-error ()
-               (error "REMOTE-SEND succeeded with invalid id.")))
+           (let ((id (remote-spawn (host-name) (node-name) '(sleep 2)
+                                   "nil" nil 1)))
+             (remote-send "hello" id)
+             (remote-send "hello2" id))
+           (remote-send "hello" (agent-id :invalid))
 
            ;; Test REMOTE-LINK
            (remote-link id "foo" :link)

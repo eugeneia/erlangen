@@ -16,31 +16,13 @@
    :queue (make-instance 'bounded-fifo-queue :capacity size)
    :priority (make-instance 'unbounded-fifo-queue)))
 
-(define-condition mailbox-full (error) ()
-  (:documentation
-   "Describes an error condition that can occur when calling
-    ENQUEUE-MESSAGE. It denotes a that the user attempted to enqueue a
-    message into a full MAILBOX."))
-
-(define-condition mailbox-closed (error) ()
-  (:documentation
-   "Describes an error condition that can occur when calling
-    ENQUEUE-MESSAGE. It denotes a that the user attempted to enqueue a
-    message into a closed MAILBOX."))
-
 (defun enqueue-message (message mailbox)
-  "Attempt to enqueue MESSAGE in MAILBOX. If MAILBOX is full signal an
-error of type MAILBOX-FULL, if its closed signal an error of type
-MAILBOX-CLOSED."
+  "Attempt to enqueue MESSAGE in MAILBOX."
   (with-slots (queue open? lock enqueued) mailbox
     (with-lock-grabbed (lock)
-      (cond ((not open?)
-             (error 'mailbox-closed))
-            ((full? queue)
-             (error 'mailbox-full))
-            (t
-             (enqueue message queue)
-             (signal-semaphore enqueued)))))
+      (when (and open? (not (full? queue)))
+        (enqueue message queue)
+        (signal-semaphore enqueued))))
   (values))
 
 (defun enqueue-priority (message mailbox)

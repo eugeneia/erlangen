@@ -30,9 +30,7 @@
   (id string))
 
 ;; SEND-REQUEST is sent by a node to issue a SEND. It contains the
-;; message to be delivered and the target agent. The remote node must
-;; either acknowledge the delivery of the message by sending an ACK-REPLY
-;; or indicate failure to do so by sending an ERROR-REPLY.
+;; message to be delivered and the target agent.
 (define-message #x34 send-request (message value) (agent string))
 
 ;; LINK-REQUEST is sent by a node to issue a LINK. It contains a remote
@@ -87,16 +85,11 @@
 
 (defun handle-send-request (connection request)
   "Handles REQUEST of type SEND-REQUEST on CONNECTION."
+  (declare (ignore connection))
   (multiple-value-bind (message agent-id) (read-send-request request)
     (let ((agent (find-agent agent-id)))
-      (if agent
-          (handler-case (send message agent)
-            (error (error)
-              (declare (ignore error))
-              (write-error-reply
-               "Unable to deliver message." connection))
-            (:no-error () (write-ack-reply connection)))
-          (write-error-reply "No such agent." connection)))))
+      (when agent
+        (send message agent)))))
 
 (defun handle-link-request (connection request)
   "Handles REQUEST of type LINK-REQUEST on CONNECTION."
@@ -275,9 +268,9 @@ and MAILBOX-SIZE."
 (defun remote-send (message id)
   "Sends MESSAGE to remote agent by ID."
   (multiple-value-bind (host node) (decode-id id)
-    (with-connection (socket host node)
-      (do-request (socket)
-        (write-send-request message id)))))
+    (ignore-errors (with-connection (socket host node)
+                     (write-send-request message id socket)
+                     (force-output socket)))))
 
 (defun remote-link (remote-id local-id mode)
   "Links remote agent by REMOTE-ID to agent by LOCAL-ID using MODE."

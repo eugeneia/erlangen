@@ -11,12 +11,10 @@
 
    *Description*:
 
-   {send} delivers _message_ to _agent_.
+   {send} transmits _message_ to _agent_. There is no guarantee as to whether
+   _message_ could be successfully delivered.
 
    *Exceptional Situations:*
-
-   If _message_ could not be delivered successfully an _error_ of _type_
-   {send-error} is signaled.
 
    If _agent_ is a _keyword_ that is not registered as a name an _error_ of
    _type_ {simple-error} is signaled."

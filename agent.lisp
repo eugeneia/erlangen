@@ -77,10 +77,7 @@
 
 (defun send (message agent)
   "Node-local SEND. See ERLANGEN:SEND for generic implementation."
-  (handler-case (enqueue-message message (agent-mailbox agent))
-    (error (error)
-      (declare (ignore error))
-      (error 'send-error)))
+  (enqueue-message message (agent-mailbox agent))
   (values))
 
 (defun exit (reason agent)

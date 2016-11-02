@@ -11,15 +11,12 @@
            :enqueue-priority
            :empty-p
            :dequeue-message
-           :close-mailbox
-           :mailbox-full
-           :mailbox-closed))
+           :close-mailbox))
 
 (defpackage erlangen.conditions
   (:documentation "Generic conditions for Erlangen.")
   (:use :cl)
-  (:export :send-error
-           :timeout))
+  (:export :timeout))
 
 (defpackage erlangen.algorithms
   (:documentation "Reusable algorithms.")
@@ -181,7 +178,6 @@
            :link
            :unlink
            :send
-           :send-error
            :receive
            :timeout
            :exit
