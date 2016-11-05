@@ -91,10 +91,10 @@
              (close-mailbox (agent-mailbox agent))))
   (values))
 
-(defun receive (&key timeout (poll-interval 1e-3))
+(defun receive (&key timeout)
   "*Arguments and Values:*
 
-   _timeout_, _poll-interval_—positive _numbers_.
+   _timeout_—a positive _number_ denoting a time interval in seconds.
 
    *Description*:
 
@@ -103,25 +103,16 @@
    of the _calling agent_ is empty, {receive} will block until a message
    arrives.
 
-   If _timeout_ is supplied {receive} will block for at most _timeout_
-   seconds and poll for a message every _poll-interval_ seconds.
+   If _timeout_ is supplied {receive} will block for at most _timeout_ seconds.
 
    *Exceptional Situations:*
 
-   If _timeout_ is supplied and exceeded an _error_ of _type_ {timeout}
-   is signaled."
-  (flet ((receive-message ()
-           (let ((message (dequeue-message (agent-mailbox *agent*))))
-             (if (and (consp message) (eq 'exit (car message)))
-                 (error 'exit :reason (cdr message))
-                 message))))
-    (if timeout
-        (with-poll-timeout ((not (empty-p (agent-mailbox *agent*)))
-                            :timeout timeout
-                            :poll-interval poll-interval)
-          :succeed (receive-message)
-          :fail (error 'timeout))
-        (receive-message))))
+   If _timeout_ is supplied and the specified time interval exceeded an _error_
+   of _type_ {timeout} is signaled."
+  (let ((message (dequeue-message (agent-mailbox *agent*) :timeout timeout)))
+    (if (and (consp message) (eq 'exit (car message)))
+        (error 'exit :reason (cdr message))
+        message)))
 
 (defun add-link (agent mode to)
   "Add link (TO) with MODE to AGENT."

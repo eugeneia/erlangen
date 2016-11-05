@@ -1,10 +1,16 @@
 ;;;; Erlangen packages.
 
+(defpackage erlangen.conditions
+  (:documentation "Generic conditions for Erlangen.")
+  (:use :cl)
+  (:export :timeout))
+
 (defpackage erlangen.mailbox
   (:documentation "Agent mailbox implementation.")
   (:use :cl
         :ccl
-        :jpl-queues)
+        :jpl-queues
+        :erlangen.conditions)
   (:export :mailbox
            :make-mailbox
            :enqueue-message
@@ -12,17 +18,6 @@
            :empty-p
            :dequeue-message
            :close-mailbox))
-
-(defpackage erlangen.conditions
-  (:documentation "Generic conditions for Erlangen.")
-  (:use :cl)
-  (:export :timeout))
-
-(defpackage erlangen.algorithms
-  (:documentation "Reusable algorithms.")
-  (:use :cl)
-  (:export :with-poll-timeout
-           :with-poll-select))
 
 (defpackage erlangen.agent
   (:documentation
@@ -32,10 +27,7 @@
   without a blocking version of {send}.")
   (:use :cl
         :ccl
-        :erlangen.mailbox
-        :erlangen.conditions
-        :erlangen.algorithms)
-  (:shadowing-import-from :erlangen.conditions :timeout)
+        :erlangen.mailbox)
   (:export :agent
            :spawn
            :add-link
@@ -63,8 +55,8 @@
 (defpackage erlangen.macros
     (:documentation "Erlangen core macros.")
     (:use :cl
-          :erlangen.agent
-          :erlangen.algorithms)
+          :ccl
+          :erlangen.agent)
     (:export :select))
 
 (defpackage erlangen.distribution.call
