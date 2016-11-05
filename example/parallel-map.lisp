@@ -35,7 +35,7 @@
                         length)
        do (send (map-chunk function vector start end result-type) worker))
     (loop with results = (make-array length :element-type result-type)
-          for worker in workers do
+          for () in workers do
          (ematch (receive)
            ((list (type agent) :ok start end chunk-result)
             (replace results chunk-result :start1 start :end1 end))
