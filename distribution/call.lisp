@@ -4,7 +4,8 @@
 
 (defun callable-p (call)
   "Predicate to check if CALL is callable."
-  (symbolp (first call)))
+  (and (listp call)
+       (symbolp (first call))))
 
 (deftype call ()
   "*Syntax:*
@@ -23,7 +24,7 @@
    _node_. A _call_ is a _list_ whose first element is a _symbol_
    denoting a _function_ and whose remaining elements are arguments to be
    applied to the denoted _function_."
-  '(and list (satisfies callable-p)))
+  '(satisfies callable-p))
 
 (defun make-function (call)
   "Return function with no arguments which applies CALL."
