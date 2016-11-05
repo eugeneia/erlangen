@@ -192,7 +192,7 @@ for ERLANGEN.AGENT."
 
    #code#
    ;; Start talking to remote nodes:
-   (spawn '(node))
+   (spawn 'node)
    #
 
    *Exceptional Situations:*
@@ -208,4 +208,5 @@ for ERLANGEN.AGENT."
                       (make-node-server :host host)
                     (spawn node-server :attach :link)
                     (register-node (node-name) port))
-    (clear-connections)))
+    (clear-connections)
+    (unregister :node)))
