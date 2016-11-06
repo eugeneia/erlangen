@@ -8,7 +8,9 @@
   (priority (error "PRIORITY must be supplied.") :type unbounded-fifo-queue)
   (open? t :type symbol)
   (lock (make-lock "erlangen.mailbox"))
-  (enqueued (make-semaphore)))
+  (enqueued (make-semaphore))
+  (messages-dequeued 0 :type fixnum)
+  (messages-dropped 0 :type fixnum))
 
 (defun make-mailbox (size)
   "Return a new empty mailbox of SIZE."
@@ -18,21 +20,23 @@
 
 (defun enqueue-message (message mailbox)
   "Attempt to enqueue MESSAGE in MAILBOX."
-  (with-slots (queue open? lock enqueued) mailbox
+  (with-slots (queue open? lock enqueued messages-dropped) mailbox
     (with-lock-grabbed (lock)
-      (when (and open? (not (full? queue)))
-        (enqueue message queue)
-        (signal-semaphore enqueued))))
+      (if (and open? (not (full? queue)))
+          (progn (enqueue message queue)
+                 (signal-semaphore enqueued))
+          (incf messages-dropped))))
   (values))
 
 (defun enqueue-priority (message mailbox)
   "Attempt to enqueue priority MESSAGE in MAILBOX. Fails if MAILBOX is closed,
 but does *not* signal an error."
-  (with-slots (priority open? lock enqueued) mailbox
+  (with-slots (priority open? lock enqueued messages-dropped) mailbox
     (with-lock-grabbed (lock)
-      (when open?
-        (enqueue message priority)
-        (signal-semaphore enqueued))))
+      (if open?
+          (progn (enqueue message priority)
+                 (signal-semaphore enqueued))
+          (incf messages-dropped))))
   (values))
 
 (defun empty-p (mailbox)
@@ -44,7 +48,7 @@ but does *not* signal an error."
 (defun dequeue-message (mailbox &key timeout)
   "Return the next message in MAILBOX. Blocks depending on TIMEOUT. Only one
 process (the “owner”) may call DEQUEUE-MESSAGE on a given `mailbox'."
-  (with-slots (queue priority lock enqueued) mailbox
+  (with-slots (queue priority lock enqueued messages-dequeued) mailbox
     ;; we don’t use WITH-LOCK-GRABBED because it conflicts with the semantics
     ;; of TIMEOUT
     (grab-lock lock)
@@ -66,6 +70,7 @@ process (the “owner”) may call DEQUEUE-MESSAGE on a given `mailbox'."
     (prog1 (if (empty? priority)
                (dequeue queue)
                (dequeue priority))
+      (incf messages-dequeued)
       (release-lock lock))))
 
 (defun close-mailbox (mailbox)

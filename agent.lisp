@@ -28,10 +28,45 @@
   (mailbox (error "MAILBOX must be supplied.") :type mailbox)
   (links nil :type list)
   (monitors nil :type list)
-  (lock (make-lock "erlangen.agent")))
+  (lock (make-lock "erlangen.agent"))
+  (symbol nil :type symbol)
+  (birthtime (get-universal-time) :type fixnum)
+  (deathtime 0 :type fixnum))
 
 (defmethod print-object ((o agent) stream)
-  (print-unreadable-object (o stream :type t :identity t)))
+  (if (agent-symbol o)
+      (print-unreadable-object (o stream :type t :identity t)
+        (let ((*package* (find-package :keyword)))
+          (prin1 (agent-symbol o) stream)))
+      (print-unreadable-object (o stream :type t :identity t))))
+
+(defun agent-stats (agent)
+  "→ _messages-received_, _messages-dropped_, _birthtime_, _deathtime_
+
+   *Arguments and Values:*
+
+   _agent_—an _agent_.
+
+   _messages-received_—a positive _fixnum_ denoting the number of messages
+   received by _agent_.
+
+   _messages-dropped_—a positive _fixnum_ denoting the number of messages
+   dropped by _agent_ because its mailbox was full.
+
+   _birthtime_—a _universal time_ denoting the time when _agent_ was started.
+
+   _deathtime_—a _universal time_ denoting the time when _agent_ exited, or
+   {nil} if _agent_ has not exited.
+
+   *Description:*
+
+   {agent-stats} returns various current statistics for _agent_."
+  (with-slots (mailbox birthtime deathtime) agent
+    (values (mailbox-messages-dequeued mailbox)
+            (mailbox-messages-dropped mailbox)
+            birthtime
+            (when (> deathtime 0)
+              deathtime))))
 
 (defmacro with-agent ((agent) &body body)
   "Lock AGENT for BODY."
@@ -172,7 +207,9 @@
         (debug-p *agent-debug*))
     (flet ((run-agent ()
              (handler-case (unwind-protect (funcall function)
-                             (close-mailbox (agent-mailbox agent)))
+                             (close-mailbox (agent-mailbox agent))
+                             (setf (agent-deathtime agent)
+                                   (get-universal-time)))
                ;; Agent exits normally.
                (:no-error (&rest values)
                  (agent-notify-exit `(:ok . ,values)))
@@ -210,24 +247,25 @@
   "Spawn process for FUNCTION with *AGENT* bound to AGENT."
   (process-run-function "erlangen.agent" (make-agent-function function agent)))
 
-(defun make-agent (function links monitors mailbox-size)
+(defun make-agent (function links monitors mailbox-size agent-symbol)
   "Create agent with LINKS, MONITORS and MAILBOX-SIZE that will execute
 FUNCTION."
   (let ((agent (make-agent% :mailbox (make-mailbox mailbox-size)
                             :links links
-                            :monitors monitors)))
+                            :monitors monitors
+                            :symbol agent-symbol)))
     (make-agent-process function agent)
     agent))
 
-(defun spawn-attached (mode to function mailbox-size)
+(defun spawn-attached (mode to function mailbox-size agent-symbol)
   "Spawn agent with MAILBOX-SIZE that will execute FUNCTION attached to
 TO in MODE."
   (let ((agent
          (ecase mode
            (:link
-            (make-agent function (list to) nil mailbox-size))
+            (make-agent function (list to) nil mailbox-size agent-symbol))
            (:monitor
-            (make-agent function nil (list to) mailbox-size)))))
+            (make-agent function nil (list to) mailbox-size agent-symbol)))))
     ;; Add link to TO only if its an AGENT structure.
     (typecase to
       (agent (with-agent (to)
@@ -236,9 +274,10 @@ TO in MODE."
 
 (defun spawn (function &key attach
                             (to *agent*)
-                            (mailbox-size *default-mailbox-size*))
+                            (mailbox-size *default-mailbox-size*)
+                            agent-symbol)
   "Node-local SPAWN. See ERLANGEN:SPAWN for generic implementation."
   (ecase attach
-    (:link     (spawn-attached :link to function mailbox-size))
-    (:monitor  (spawn-attached :monitor to function mailbox-size))
-    ((nil)     (make-agent function nil nil mailbox-size))))
+    (:link     (spawn-attached :link to function mailbox-size agent-symbol))
+    (:monitor  (spawn-attached :monitor to function mailbox-size agent-symbol))
+    ((nil)     (make-agent function nil nil mailbox-size agent-symbol))))

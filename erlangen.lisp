@@ -89,9 +89,11 @@ for ERLANGEN.AGENT."
                               ((or function symbol) function)
                               (call (make-function function)))
                             :attach attach
-                            :mailbox-size mailbox-size)
-      (let ((agent (remote-spawn host
-                                 node
+                            :mailbox-size mailbox-size
+                            :agent-symbol (typecase function
+                                            (symbol function)
+                                            (call (first function))))
+      (let ((agent (remote-spawn host node
                                  (if (symbolp function)
                                      (list function)
                                      function)

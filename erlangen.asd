@@ -49,6 +49,11 @@
                                    "conditions"
                                    "macros"
                                    "distribution/call"))
+               ;; Management
+               (:file "management"
+                      :depends-on ("packages"
+                                   "mailbox"
+                                   "agent"))
                ;; Tests
                (:file "test/agent-test"
                       :depends-on ("agent"))

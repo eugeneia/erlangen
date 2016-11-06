@@ -65,11 +65,11 @@
 
            ;; Test REMOTE-LINK
            (remote-link id "foo" :link)
-           (assert (equal (erlangen.agent::agent-links
+           (assert (equal (erlangen.agent:agent-links
                            (find-agent id))
                           '("foo" "bar")))
            (remote-link id "foo" :monitor)
-           (assert (equal (erlangen.agent::agent-monitors
+           (assert (equal (erlangen.agent:agent-monitors
                            (find-agent id))
                           '("foo")))
            (handler-case (remote-link id "foo" :invalid)
@@ -104,10 +104,10 @@
 
            ;; Test REMOTE-UNLINK
            (remote-unlink id "foo")
-           (assert (equal (erlangen.agent::agent-links
+           (assert (equal (erlangen.agent:agent-links
                            (find-agent id))
                           '("bar")))
-           (assert (equal (erlangen.agent::agent-monitors
+           (assert (equal (erlangen.agent:agent-monitors
                            (find-agent id))
                           '()))
            (remote-unlink (agent-id :invalid) "foo")

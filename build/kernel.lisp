@@ -6,7 +6,7 @@
 (asdf:load-system :erlangen)
 
 (push (lambda ()
-        (use-package :erlangen :cl-user))
+        (use-package '(:erlangen :erlangen.management) :cl-user))
       *lisp-startup-functions*)
 
 (gc)

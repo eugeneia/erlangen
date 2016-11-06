@@ -17,7 +17,9 @@
            :enqueue-priority
            :empty-p
            :dequeue-message
-           :close-mailbox))
+           :close-mailbox
+           :mailbox-messages-dequeued
+           :mailbox-messages-dropped))
 
 (defpackage erlangen.agent
   (:documentation
@@ -29,6 +31,9 @@
         :ccl
         :erlangen.mailbox)
   (:export :agent
+           :agent-stats
+           :agent-links
+           :agent-monitors
            :spawn
            :add-link
            :remove-link
@@ -180,3 +185,16 @@
            :node
            :*default-mailbox-size*
            :*agent-debug*))
+
+(defpackage erlangen.management
+  (:use :cl
+        :ccl
+        :erlangen.agent
+        :erlangen.mailbox)
+  (:export :agent-stats
+           :agent-tree
+           :root
+           :linked
+           :monitored
+           :process-agent
+           :flush-messages))
