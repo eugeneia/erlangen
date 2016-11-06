@@ -116,7 +116,7 @@ name."
                   (:anonymous  (find-anonymous-agent aid))
                   (:registered (find-registered-agent aid))))))))
 
-(defvar *reserved*/lock (make-lock "…id:*reserved-ids*"))
+(defvar *reserved*/lock (make-lock "…id::*reserved-ids*"))
 (defvar *reserved* nil
   "List of `aid' reservations")
 
