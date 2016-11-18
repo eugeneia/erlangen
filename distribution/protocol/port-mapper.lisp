@@ -93,6 +93,7 @@ to indicate failure."
     (with-socket (socket (make-socket* :connect :passive
                                        :local-host host
                                        :local-port port
+                                       :reuse-address t
                                        :keepalive t))
       (loop do (select
                 ((accept-connection socket :wait nil) (connection)
@@ -141,7 +142,8 @@ to indicate failure."
   (lambda ()
     (with-socket (socket (make-socket* :connect :passive
                                        :local-host host
-                                       :local-port port))
+                                       :local-port port
+                                       :reuse-address t))
       (loop do (select
                 ((accept-connection socket :wait nil) (connection)
                   (ignore-errors

@@ -206,6 +206,7 @@ requests."
   (setf (connection-socket connection)
         (make-socket* :remote-host host
                       :remote-port (query-node-port host node)
+                      :reuse-address t
                       :keepalive t))
   (assert-protocol-version (connection-socket connection))
   (replay-deferred connection))
