@@ -52,7 +52,8 @@ process (the “owner”) may call DEQUEUE-MESSAGE on a given `mailbox'."
     ;; we don’t use WITH-LOCK-GRABBED because it conflicts with the semantics
     ;; of TIMEOUT
     (grab-lock lock)
-    (when (and (empty? queue) (empty? priority))
+    ;; XXX - I don’t understand why this needs to be a LOOP instead of a WHEN
+    (loop while (and (empty? queue) (empty? priority)) do
       ;; both QUEUE and PRIORITY are empty, release LOCK to give other threads
       ;; a chance to enqueue messages
       (release-lock lock)
