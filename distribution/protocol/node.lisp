@@ -205,7 +205,9 @@ requests."
   "Establishes CONNECTION to remote NODE on HOST."
   (setf (connection-socket connection)
         (make-socket* :remote-host host
-                      :remote-port (query-node-port host node)
+                      :remote-port (handler-case (query-node-port host node)
+                                     (protocol-error (e)
+                                       (error (protocol-error-description e))))
                       :reuse-address t
                       :keepalive t))
   (assert-protocol-version (connection-socket connection))
