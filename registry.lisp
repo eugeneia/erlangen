@@ -2,7 +2,7 @@
 
 (in-package :erlangen.registry)
 
-(defvar *registry* (make-hash-table))
+(defvar *registry* (make-hash-table :lock-free t))
 
 (defvar *registry*/lock (make-read-write-lock))
 

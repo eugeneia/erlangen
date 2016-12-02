@@ -167,7 +167,7 @@
 
 ;; The local node opens and reuses one `connection' per remote node.
 (defvar *remote-connections*/lock (make-lock "…node::*remote-connections*"))
-(defvar *remote-connections* (make-hash-table :test 'equal)
+(defvar *remote-connections* (make-hash-table :test 'equal :lock-free t)
   "Holds established connections to remote nodes.")
 
 (defstruct connection
