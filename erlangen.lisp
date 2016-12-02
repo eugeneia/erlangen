@@ -206,9 +206,16 @@ for ERLANGEN.AGENT."
   (register :node)
   (when name
     (setf (node-name) name))
+  (handler-case (query-node-port "localhost" name)
+    (error (error) (declare (ignore error)))
+    (:no-error (port)
+      (error "Node “~a” is already registered to port: ~a" name port)))
   (unwind-protect (multiple-value-bind (node-server port)
                       (make-node-server :host host)
                     (spawn node-server :attach :link)
-                    (register-node (node-name) port))
+                    (repeat-rate (lambda ()
+                                   (ignore-errors
+                                     (register-node (node-name) port)))
+                                 :hz 0.5))
     (clear-connections)
     (unregister :node)))
