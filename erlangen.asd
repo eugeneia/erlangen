@@ -17,8 +17,11 @@
                (:file "registry"
                       :depends-on ("packages"
                                    "agent"))
+               (:file "algorithms"
+                      :depends-on ("packages"))
                (:file "macros"
                       :depends-on ("packages"
+                                   "algorithms"
                                    "agent"))
                (:file "distribution/call"
                       :depends-on ("packages"))
@@ -47,6 +50,7 @@
                                    "agent"
                                    "registry"
                                    "conditions"
+                                   "algorithms"
                                    "macros"
                                    "distribution/call"))
                ;; Management

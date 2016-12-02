@@ -51,8 +51,7 @@ optionally :RECEIVE clause."
   (multiple-value-bind (clauses receive-clause)
       (parse-select-clauses clauses)
     `(block select
-       (process-wait
-        "erlangen.macros:select"
+       (repeat-pace
         (lambda ()
           ,@(loop for clause in clauses collect
                  (destructuring-bind (form &optional vars &rest body) clause
@@ -63,5 +62,4 @@ optionally :RECEIVE clause."
                (destructuring-bind (vars &rest body) receive-clause
                  `(multiple-value-bind (,message-p-sym ,@vars) (receive-nowait)
                     (return-from select (progn ,@body))))
-               '(receive-nowait))
-          (values))))))
+               '(receive-nowait)))))))

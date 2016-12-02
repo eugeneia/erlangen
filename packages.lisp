@@ -57,11 +57,18 @@
            :registered
            :agent-by-name))
 
+(defpackage erlangen.algorithms
+  (:documentation "Generic algorithms used in Erlangen.")
+  (:use :cl)
+  (:export :repeat-pace
+           :repeat-rate))
+
 (defpackage erlangen.macros
     (:documentation "Erlangen core macros.")
     (:use :cl
           :ccl
-          :erlangen.agent)
+          :erlangen.agent
+          :erlangen.algorithms)
     (:export :select))
 
 (defpackage erlangen.distribution.call
@@ -156,6 +163,7 @@
         :erlangen.agent
         :erlangen.registry
         :erlangen.conditions
+        :erlangen.algorithms
         :erlangen.macros
         :erlangen.distribution.call
         :erlangen.distribution.id
