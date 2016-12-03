@@ -3,6 +3,7 @@
 (defpackage erlangen.distribution.protocol.port-mapper-test
   (:use :cl
         :erlangen
+        :erlangen.distribution.protocol.common
         :erlangen.distribution.protocol.port-mapper)
   (:export :run-tests))
 
@@ -33,7 +34,7 @@
            (handler-case
                (register-node "node1" 12345
                               :registry-port registry-port)
-             (simple-error (error) (declare (ignore error)))
+             (protocol-error (error) (declare (ignore error)))
              (:no-error ()
                ;; This branch will never be taken, because REGISTER-NODE
                ;; wont exit on success.

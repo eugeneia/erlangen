@@ -10,19 +10,19 @@
                       :depends-on ("packages"))
                (:file "mailbox"
                       :depends-on ("packages"))
-               (:file "algorithms"
-                      :depends-on ("packages"))
                (:file "agent"
                       :depends-on ("packages"
                                    "mailbox"
-                                   "algorithms"
                                    "conditions"))
                (:file "registry"
                       :depends-on ("packages"
                                    "agent"))
+               (:file "algorithms"
+                      :depends-on ("packages"))
                (:file "macros"
                       :depends-on ("packages"
-                                   "algorithms"))
+                                   "algorithms"
+                                   "agent"))
                (:file "distribution/call"
                       :depends-on ("packages"))
                (:file "distribution/protocol/buffers"
@@ -50,8 +50,14 @@
                                    "agent"
                                    "registry"
                                    "conditions"
+                                   "algorithms"
                                    "macros"
                                    "distribution/call"))
+               ;; Management
+               (:file "management"
+                      :depends-on ("packages"
+                                   "mailbox"
+                                   "agent"))
                ;; Tests
                (:file "test/agent-test"
                       :depends-on ("agent"))

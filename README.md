@@ -149,9 +149,9 @@ make bin/erlangen-port-mapper
 bin/erlangen-port-mapper localhost &
 ```
 
-in a shell in the root of the Erlangen repository. Now build the Erlangen kernel
-in the same way to help quickly start additional Erlangen instances, and use it
-to start a node named *map-node*.
+in a shell in the root of the Erlangen repository. Now build the Erlangen
+kernel in the same way to help quickly start additional Erlangen instances, and
+use it to start a node named *map-node*.
 
 ```
 make bin/erlangen-kernel
@@ -159,7 +159,7 @@ bin/erlangen-kernel -n -e '(node :name "map-node")'
 ```
 
 Hint: if you use Emacs, you can start a new Erlangen instance with Slime with
-*C-u M-x slime RET /path/to/erlangen-kernel*.
+`C-u M-x slime RET /path/to/erlangen-kernel`.
 
 For the following example to work your hostname as reported by
 `machine-instance` must resolve to the local host. You might need to edit your

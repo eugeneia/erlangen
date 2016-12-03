@@ -97,8 +97,9 @@
 
 (defun compile-read-message (fields)
   `(with-fast-input (buffer octets)
+     (declare (ignorable buffer))
      (values
-      ,@(loop for (name type) in fields collect
+      ,@(loop for (() type) in fields collect
              (ecase type
                (integer '(readu32-le buffer))
                (string (compile-read-octets 'utf-8-bytes-to-string))

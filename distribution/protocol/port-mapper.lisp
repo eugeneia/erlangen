@@ -93,6 +93,7 @@ to indicate failure."
     (with-socket (socket (make-socket* :connect :passive
                                        :local-host host
                                        :local-port port
+                                       :reuse-address t
                                        :keepalive t))
       (loop do (select
                 ((accept-connection socket :wait nil) (connection)
@@ -141,7 +142,8 @@ to indicate failure."
   (lambda ()
     (with-socket (socket (make-socket* :connect :passive
                                        :local-host host
-                                       :local-port port))
+                                       :local-port port
+                                       :reuse-address t))
       (loop do (select
                 ((accept-connection socket :wait nil) (connection)
                   (ignore-errors
@@ -162,14 +164,15 @@ REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
     (spawn (make-port-directory context directory-host directory-port)
            :attach :link))
   (receive))
-  
+
 (defun register-node (name port &key (registry-host "localhost")
                                      (registry-port 10001))
   "Register PORT for node by NAME on registry service listening on
 REGISTRY-PORT (defaults to 10001) of REGISTRY-HOST (defaults to
 “localhost”). Signals an error on failure."
   (with-socket (socket (make-socket* :remote-host registry-host
-                                     :remote-port registry-port))
+                                     :remote-port registry-port
+                                     :keepalive t))
     (assert-protocol-version socket)
     (do-request (socket)
       (write-register-request name port))
