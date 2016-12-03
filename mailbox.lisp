@@ -49,30 +49,20 @@ but does *not* signal an error."
   "Return the next message in MAILBOX. Blocks depending on TIMEOUT. Only one
 process (the “owner”) may call DEQUEUE-MESSAGE on a given `mailbox'."
   (with-slots (queue priority lock enqueued messages-dequeued) mailbox
-    ;; we don’t use WITH-LOCK-GRABBED because it conflicts with the semantics
-    ;; of TIMEOUT
-    (grab-lock lock)
-    ;; XXX - I don’t understand why this needs to be a LOOP instead of a WHEN
-    (loop while (and (empty? queue) (empty? priority)) do
-      ;; both QUEUE and PRIORITY are empty, release LOCK to give other threads
-      ;; a chance to enqueue messages
-      (release-lock lock)
-      (case timeout
-        ;; TIMEOUT = nil: wait for new message indefinitely
-        ((nil)     (wait-on-semaphore enqueued))
-        ;; TIMEOUT = 0, signal `timeout' immediately
-        (0         (error 'timeout))
-        ;; TIMEOUT = n: wait up to n seconds for new message
-        (otherwise (unless (timed-wait-on-semaphore enqueued timeout)
-                     (error 'timeout))))
-      ;; if we got here, another process enqueued a new message, and we, the
-      ;; owner, may grab LOCK and dequeue it.
-      (grab-lock lock))
-    (prog1 (if (empty? priority)
-               (dequeue queue)
-               (dequeue priority))
+    (case timeout
+      ;; TIMEOUT = nil: wait for new message indefinitely
+      ((nil)     (wait-on-semaphore enqueued))
+      ;; TIMEOUT = 0, signal `timeout' immediately
+      (0         (unless (try-semaphore enqueued)
+                   (error 'timeout)))
+      ;; TIMEOUT = n: wait up to n seconds for new message
+      (otherwise (unless (timed-wait-on-semaphore enqueued timeout)
+                   (error 'timeout))))
+    (with-lock-grabbed (lock)
       (incf messages-dequeued)
-      (release-lock lock))))
+      (if (empty? priority)
+          (dequeue queue)
+          (dequeue priority)))))
 
 (defun close-mailbox (mailbox)
   "Close MAILBOX."
