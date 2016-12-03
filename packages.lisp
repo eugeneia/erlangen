@@ -149,6 +149,7 @@
         :erlangen.distribution.protocol.port-mapper)
   (:export :make-node-server
            :clear-connections
+           :connection-stats
            :remote-spawn
            :remote-send
            :remote-link
@@ -201,11 +202,13 @@ introspection, and retrieval of statistics for agents and remote connections.")
   (:use :cl
         :ccl
         :erlangen.agent
-        :erlangen.mailbox)
+        :erlangen.mailbox
+        :erlangen.distribution.protocol.node)
   (:export :agent-stats
            :agent-tree
            :root
            :linked
            :monitored
            :process-agent
-           :flush-messages))
+           :flush-messages
+           :connection-stats))

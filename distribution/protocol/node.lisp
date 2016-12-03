@@ -172,14 +172,63 @@
 
 (defstruct connection
   "A `connection' contains a SOCKET and a LOCK, as well as a list of DEFERRED
-requests."
+requests. Additionally, it contains a CREATION-TIME and an ERRORS counter."
   socket
   (deferred nil :type list)
   (deferred-tail nil :type (or cons null))
-  (lock (make-lock "…node::connection") :type lock))
+  (lock (make-lock "…node::connection") :type lock)
+  (creation-time (get-universal-time) :type fixnum)
+  (errors 0 :type fixnum))
+
+(defun connection-stats (&optional host node)
+  "→ _stats-for-connections_
+
+   → _errors_, _established_
+
+   *Arguments and Values:*
+
+   _host_—a _string_ denoting a _host name_ or {nil}. The default is {nil}.
+
+   _node_—a _string_ denoting a _node name_ or {nil}. The default is {nil}.
+
+   _stats-for-connections_—a _list_ with one element for each matching
+   connection. Each element is a _list_ of four elements containing the host
+   name, node name, _errors_, and _established_ of the respective connection.
+
+   _errors_—a positive _fixnum_ denoting the number of errors on the matching
+   connection.
+
+   _established_—a _universal time_ denoting the time when the matching
+   connection was initially established, or {nil} denoting that the connection
+   has not been established yet.
+
+   *Description:*
+
+   {connection-stats} returns essential statistics for connections to remote
+   nodes. If called without arguments it returns _stats-for-connections_ to all
+   remote nodes to which connections where established. If _host_ is supplied
+   _stats-for-connections_ includes only connections to _host_. If _node_ is
+   supplied {connection-stats} returns _errors_ and _established_ for the
+   connection to _node_."
+  (flet ((node-stats (&aux (nid (cons host node))
+                           (connection (gethash nid *remote-connections*)))
+           (if connection
+               (with-slots (errors creation-time) connection
+                 (values errors creation-time))
+               (values 0 nil)))
+         (remote-stats ()
+           (loop for nid being the hash-keys of #1=*remote-connections*
+                 for (remote-host . remote-node) = nid
+              when (or (null host) (equal host remote-host)) collect
+                (with-slots (errors creation-time) (gethash nid #1#)
+                  `(,remote-host ,remote-node ,errors ,creation-time)))))
+    (with-lock-grabbed (*remote-connections*/lock)
+      (if node
+          (node-stats)
+          (remote-stats)))))
 
 (defun get-connection (host node &aux (nid (cons host node)))
-  "Returns the connection object for NODE on HOST."
+  "Returns the connection object for remote NODE on HOST."
   (with-lock-grabbed (*remote-connections*/lock)
     (or #1=(gethash nid *remote-connections*)
         (setf #1# (make-connection)))))
@@ -246,11 +295,11 @@ to NODE of HOST. If PERSIST-P is non-nil REQUEST will be persistent."
                            ,@request)
              ((and error (not protocol-error)) (,error-sym)
                (declare (ignorable ,error-sym))
-               ,(when persist-p
-                  `(defer-request (lambda (,var) ,@request) ,connection-sym))
                (close-connection ,connection-sym)
-               ,(unless persist-p
-                  `(error ,error-sym)))))
+               (incf (connection-errors ,connection-sym))
+               ,(if persist-p
+                    `(defer-request (lambda (,var) ,@request) ,connection-sym)
+                    `(error ,error-sym)))))
          (values))))
 
 (defun remote-spawn (host node call parent attach mailbox-size)
