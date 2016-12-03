@@ -203,13 +203,13 @@ for ERLANGEN.AGENT."
    registered by another node, or because the port mapper is unreachable)
    an _error_ of _type_ {error} is signaled, and the node protocol server
    is killed."
-  (register :node)
   (when name
     (setf (node-name) name))
   (handler-case (query-node-port "localhost" name)
     (error (error) (declare (ignore error)))
     (:no-error (port)
       (error "Node “~a” is already registered to port: ~a" name port)))
+  (register :node)
   (unwind-protect (multiple-value-bind (node-server port)
                       (make-node-server :host host)
                     (spawn node-server :attach :link)
