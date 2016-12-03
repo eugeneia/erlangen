@@ -58,7 +58,8 @@ the result vector. Here is roughly how `parallel-map` works:
      contains the chunk’s result, and inserts them into the final result vector
 
 The worker agents initially do nothing at all. They each just wait to receive a
-function to execute, and quit when they are done.
+function to execute, and quit when they are done. Note that we use the [Trivia](https://github.com/guicho271828/trivia)
+pattern matching library to match received messages.
 
 ```
 (defun worker ()
@@ -140,9 +141,9 @@ Now we can spawn `parallel-map` agents like this
 
 What fun are agents if they aren’t distributed over a network? Erlangen comes
 with support for distribution via TCP/IP built in. Each instance of Erlangen
-can act as a *node*, and talk to other Erlangen nodes. But first, there needs
-to be a *port mapper* on the network for nodes to find each other. To build and
-run the Erlangen port mapper, execute the commands
+can act as a *node*, and talk to other Erlangen nodes. In order to facilitate
+port discovery of of remote nodes, there needs to be a *port mapper* running on
+the host. To build and run the Erlangen port mapper, execute the commands
 
 ```
 make bin/erlangen-port-mapper
