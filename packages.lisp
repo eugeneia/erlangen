@@ -195,6 +195,9 @@
            :*agent-debug*))
 
 (defpackage erlangen.management
+  (:documentation
+   "Management extensions for Erlangen including functions for agent tree
+introspection, and retrieval of statistics for agents and remote connections.")
   (:use :cl
         :ccl
         :erlangen.agent

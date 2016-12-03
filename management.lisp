@@ -68,11 +68,16 @@
 
    {agent-tree} returns the current _agent-tree_ whose root is _agent_."
   (let (linked monitored)
-    (loop for x in (agent-links agent)
-       if (find agent (agent-monitors x)) do
-         (push (agent-tree x) monitored)
-       else do
-         (push x linked))
+    (typecase agent
+      (erlangen.agent:agent ; stop at local edges
+       (loop for x in (agent-links agent)
+          if (and ; remote agents show up as links
+                  (typep x 'erlangen.agent:agent)
+                  (find agent (agent-monitors x)))
+          do
+            (push (agent-tree x) monitored)
+          else do
+            (push x linked))))
     (make-instance 'agent-tree
                    :root agent
                    :linked linked
