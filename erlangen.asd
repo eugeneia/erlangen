@@ -5,11 +5,13 @@
   "Distributed, asychronous message passing system for Clozure Common Lisp."
   :author "Max Rottenkolber <max@mr.gy>"
   :license "Not licensed"
-  :components ((:file "packages")
+  :components ((:file "ccl")
+               (:file "packages")
                (:file "conditions"
                       :depends-on ("packages"))
                (:file "mailbox"
-                      :depends-on ("packages"))
+                      :depends-on ("ccl"
+                                   "packages"))
                (:file "agent"
                       :depends-on ("packages"
                                    "mailbox"
