@@ -174,7 +174,7 @@ With that out of the way, we can also make our initial Erlangen instance a
 node, and offload some work to *map-node*:
 
 ```
-(spawn '(node))
+(spawn 'node)
 (spawn '(erlangen.examples:parallel-map 1+ #(2 4 6 8 10 12 14))
        :attach :monitor
        :node "map-node")
