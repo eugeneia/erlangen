@@ -8,7 +8,7 @@ changes._
 ## Documentation
 
  * [Manual and API Documentation](http://mr.gy/software/erlangen/api.html)
-
+ * [Erlangen: introduction](http://mr.gy/blog/erlangen-intro.html)
 
 ## Dependencies
 
@@ -185,4 +185,3 @@ node, and offload some work to *map-node*:
 What happened? We spawned an agent on the remote *map-node* instance to run
 `parallel-map`, and received its exit notification transparently over the
 network.
-
