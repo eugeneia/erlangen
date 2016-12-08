@@ -7,5 +7,5 @@
    "*Description:*
 
     Describes an error condition that can occur when using functions with
-    a timeout. It denotes a that the operations was unable to
+    a timeout. It denotes a that the operation was unable to
     successfully complete within a given duration."))
