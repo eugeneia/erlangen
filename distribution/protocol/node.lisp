@@ -177,8 +177,8 @@ requests. Additionally, it contains a CREATION-TIME and an ERRORS counter."
   (deferred nil :type list)
   (deferred-tail nil :type (or cons null))
   (lock (make-lock "…node::connection") :type lock)
-  (creation-time (get-universal-time) :type fixnum)
-  (errors 0 :type fixnum))
+  (creation-time (get-universal-time) :type (integer 0))
+  (errors 0 :type (integer 0)))
 
 (defun connection-stats (&optional host node)
   "→ _stats-for-connections_
@@ -195,7 +195,7 @@ requests. Additionally, it contains a CREATION-TIME and an ERRORS counter."
    connection. Each element is a _list_ of four elements containing the host
    name, node name, _errors_, and _established_ of the respective connection.
 
-   _errors_—a positive _fixnum_ denoting the number of errors on the matching
+   _errors_—a positive _integer_ denoting the number of errors on the matching
    connection.
 
    _established_—a _universal time_ denoting the time when the matching

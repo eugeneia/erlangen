@@ -30,8 +30,8 @@
   (monitors nil :type list)
   (lock (make-lock "erlangen.agent"))
   (symbol nil :type symbol)
-  (birthtime (get-universal-time) :type fixnum)
-  (deathtime 0 :type fixnum))
+  (birthtime (get-universal-time) :type (integer 0))
+  (deathtime 0 :type (integer 0)))
 
 (defmethod print-object ((o agent) stream)
   (if (agent-symbol o)
@@ -47,10 +47,10 @@
 
    _agent_—an _agent_.
 
-   _messages-received_—a positive _fixnum_ denoting the number of messages
+   _messages-received_—a positive _integer_ denoting the number of messages
    received by _agent_.
 
-   _messages-dropped_—a positive _fixnum_ denoting the number of messages
+   _messages-dropped_—a positive _integer_ denoting the number of messages
    dropped by _agent_ because its mailbox was full.
 
    _birthtime_—a _universal time_ denoting the time when _agent_ was started.
