@@ -110,6 +110,10 @@
   (:documentation
    "Conditions of type `exit' are signaled by agents when they EXIT."))
 
+(defmethod print-object ((o exit) stream)
+  (print-unreadable-object (o stream :type t :identity t)
+    (prin1 (exit-reason o) stream)))
+
 (defun send (message agent)
   "Node-local SEND. See ERLANGEN:SEND for generic implementation."
   (enqueue-message message (agent-mailbox agent))
