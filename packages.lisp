@@ -64,12 +64,11 @@
            :repeat-rate))
 
 (defpackage erlangen.macros
-    (:documentation "Erlangen core macros.")
-    (:use :cl
-          :ccl
-          :erlangen.agent
-          :erlangen.algorithms)
-    (:export :select))
+  (:documentation "Erlangen core macros.")
+  (:use :cl
+        :erlangen.agent
+        :erlangen.algorithms)
+  (:export :select))
 
 (defpackage erlangen.distribution.call
   (:documentation
@@ -102,6 +101,7 @@
            :write-ack-reply
            :read-ack-reply
            :protocol-error
+           :protocol-error-description
            :make-socket*
            :with-socket
            :do-request))
