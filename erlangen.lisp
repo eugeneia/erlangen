@@ -54,7 +54,7 @@ for ERLANGEN.AGENT."
     (string (remote-notify (agent-id exited) reason agent))))
 
 (defun spawn (function &key attach (mailbox-size *default-mailbox-size*)
-                            node (host (host-name)))
+                            (class 'erlangen.agent:agent) node (host (host-name)))
   "*Arguments and Values:*
 
    _function_—a _function designator_ or a _call_.
@@ -88,6 +88,7 @@ for ERLANGEN.AGENT."
       (erlangen.agent:spawn (etypecase function
                               ((or function symbol) function)
                               (call (make-function function)))
+                            :class class
                             :attach attach
                             :mailbox-size mailbox-size
                             :agent-symbol (typecase function

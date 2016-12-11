@@ -58,9 +58,6 @@
           (prin1 (agent-symbol o) stream)))
       (print-unreadable-object (o stream :type t :identity t))))
 
-(defun make-agent% (&rest args)
-  (apply 'make-instance 'agent args))
-
 (defun agent-stats (agent)
   "→ _messages-received_, _messages-dropped_, _birthtime_, _deathtime_
 
@@ -110,7 +107,7 @@
    operation except that the exit reason will be the _agent_ instead of
    the fatal _condition_.")
 
-(defvar *agent* (make-agent% :mailbox (make-mailbox *default-mailbox-size*))
+(defvar *agent* (make-instance 'agent :mailbox (make-mailbox *default-mailbox-size*))
   "Bound to current agent.")
 ;; *agent* will be rebound by the “real” agents, but for the initial processes
 ;; we create a “fake” agent instance with a mailbox. This way they can SPAWN,
@@ -272,25 +269,26 @@
   "Spawn process for FUNCTION with *AGENT* bound to AGENT."
   (process-run-function "erlangen.agent" (make-agent-function function agent)))
 
-(defun make-agent (function links monitors mailbox-size agent-symbol)
+(defun make-agent (class function links monitors mailbox-size agent-symbol)
   "Create agent with LINKS, MONITORS and MAILBOX-SIZE that will execute
 FUNCTION."
-  (let ((agent (make-agent% :mailbox (make-mailbox mailbox-size)
-                            :links links
-                            :monitors monitors
-                            :symbol agent-symbol)))
+  (let ((agent (make-instance class
+                              :mailbox (make-mailbox mailbox-size)
+                              :links links
+                              :monitors monitors
+                              :symbol agent-symbol)))
     (make-agent-process function agent)
     agent))
 
-(defun spawn-attached (mode to function mailbox-size agent-symbol)
+(defun spawn-attached (mode to class function mailbox-size agent-symbol)
   "Spawn agent with MAILBOX-SIZE that will execute FUNCTION attached to
 TO in MODE."
   (let ((agent
          (ecase mode
            (:link
-            (make-agent function (list to) nil mailbox-size agent-symbol))
+            (make-agent class function (list to) nil mailbox-size agent-symbol))
            (:monitor
-            (make-agent function nil (list to) mailbox-size agent-symbol)))))
+            (make-agent class function nil (list to) mailbox-size agent-symbol)))))
     ;; Add link to TO only if its an AGENT instance.
     (typecase to
       (agent (with-agent (to)
@@ -300,9 +298,10 @@ TO in MODE."
 (defun spawn (function &key attach
                             (to *agent*)
                             (mailbox-size *default-mailbox-size*)
+                            (class 'agent)
                             agent-symbol)
   "Node-local SPAWN. See ERLANGEN:SPAWN for generic implementation."
   (ecase attach
-    (:link     (spawn-attached :link to function mailbox-size agent-symbol))
-    (:monitor  (spawn-attached :monitor to function mailbox-size agent-symbol))
-    ((nil)     (make-agent function nil nil mailbox-size agent-symbol))))
+    (:link     (spawn-attached :link to class function mailbox-size agent-symbol))
+    (:monitor  (spawn-attached :monitor to class function mailbox-size agent-symbol))
+    ((nil)     (make-agent class function nil nil mailbox-size agent-symbol))))
