@@ -64,6 +64,9 @@ for ERLANGEN.AGENT."
    _mailbox-size_—a positive _unsigned integer_. The default is
    {*default-mailbox-size*}.
 
+   _class_-name of the class of the agent to create.  Only supported for
+   local agents.  Defaults to {'erlangen.agent:agent}.
+
    _node_—a _node name_ or {nil}. The default is {nil}.
 
    _host_—a _host_ as accepted by [resolve-address](http://ccl.clozure.com/docs/ccl.html#f_resolve-address).
