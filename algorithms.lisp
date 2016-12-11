@@ -1,44 +1,28 @@
-;;;; Reusable algorithms.
+;;;; Generic algorithms
 
 (in-package :erlangen.algorithms)
 
-(defun poll-timeout% (predicate timeout poll-interval success-fn fail-fn)
-  (when (= timeout 0)
-    (if (funcall predicate)
-        (return-from poll-timeout% (funcall success-fn))
-        (return-from poll-timeout% (funcall fail-fn))))
-  (loop for elapsed = 0 then (+ elapsed poll-interval) do
-       (cond ((> elapsed timeout)
-              (return-from poll-timeout% (funcall fail-fn)))
-             ((funcall predicate)
-              (return-from poll-timeout% (funcall success-fn)))
-             (t
-              (sleep poll-interval)))))
+(defun repeat-pace (function &key (delta 0.01) (maxsleep 0.1))
+  "Repeatedly call FUNCTION, but pace interval "
+  (loop with sleep = 0 for progress = (funcall function)
+     if progress do
+       (setf sleep 0)
+     else do
+       (setf sleep (max (+ sleep delta) maxsleep))
+       (sleep sleep)))
 
-(defmacro with-poll-timeout ((predicate-form &key timeout poll-interval)
-                             &key succeed fail)
-  "Poll every POLL-INTERVAL seconds until PREDICATE-FORM returns a true
-value or TIMEOUT seconds have elapsed. In the former case evaluate and
-return the result of SUCCEED. Otherwise evaluate and return the result of
-FAIL."
-  `(poll-timeout% (lambda () ,predicate-form) ,timeout ,poll-interval
-                  (lambda () ,succeed)
-                  (lambda () ,fail)))
+(let ((float-time-units (float internal-time-units-per-second)))
+  (defun now ()
+    (/ (get-internal-real-time) float-time-units)))
 
-(defmacro with-poll-select (poll-interval &rest clauses)
-  "CLAUSE::= (POLL-FORM (&rest VARS) &body body)
-
-Poll every POLL-INTERVAL seconds until a CLAUSE's POLL-FORM returns true
-as its first value. Evaluate the CLAUSE's BODY with VARS bound to
-POLL-FORM's return values and return. If a CLAUSE's VARS are nil (empty),
-the clause will repeatedly be polled but never cause a return and its
-BODY will never be evaluated."
-  `(block poll-select
-     (loop do
-          ,@(loop for clause in clauses collect
-                 (destructuring-bind (form &optional vars &rest body)
-                     clause
-                   `(multiple-value-bind ,vars ,form
-                      (when ,(first vars)
-                        (return-from poll-select (progn ,@body))))))
-          (sleep ,poll-interval))))
+(defun repeat-rate (function &key (hz 1))
+  (let ((interval (/ 1 hz))
+        (start (now)))
+    (loop do
+         (funcall function)
+         (let* ((next (+ start interval))
+                (now (now))
+                (sleep (- next now)))
+           (when (> sleep 0)
+             (sleep sleep))
+           (setf start (max now next))))))

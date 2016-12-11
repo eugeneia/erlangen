@@ -22,10 +22,21 @@
                    (when dport
                      `(:directory-port ,(parse-integer dport)))))))
 
+(defclass erlangen-port-mapper (ccl::application)
+  ((command-line-arguments :initform nil)))
+
+(setf ccl::*invoke-debugger-hook-on-interrupt* t)
+(setf ccl::*debugger-hook*
+      (lambda (condition hook)
+        (declare (ignore hook))
+        (etypecase condition
+          (ccl::interrupt-signal-condition (quit 130)))))
+
 (gc)
 
 (save-application
  "bin/erlangen-port-mapper"
+ :application-class 'erlangen-port-mapper
  :toplevel-function 'port-mapper
  :error-handler :quit
  :purify t

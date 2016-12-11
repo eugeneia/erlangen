@@ -1,30 +1,25 @@
 ;;;; Erlangen packages.
 
+(defpackage erlangen.conditions
+  (:documentation "Generic conditions for Erlangen.")
+  (:use :cl)
+  (:export :timeout))
+
 (defpackage erlangen.mailbox
   (:documentation "Agent mailbox implementation.")
   (:use :cl
         :ccl
-        :jpl-queues)
+        :jpl-queues
+        :erlangen.conditions)
   (:export :mailbox
            :make-mailbox
            :enqueue-message
+           :enqueue-priority
            :empty-p
            :dequeue-message
            :close-mailbox
-           :mailbox-full
-           :mailbox-closed))
-
-(defpackage erlangen.conditions
-  (:documentation "Generic conditions for Erlangen.")
-  (:use :cl)
-  (:export :send-error
-           :timeout))
-
-(defpackage erlangen.algorithms
-  (:documentation "Reusable algorithms.")
-  (:use :cl)
-  (:export :with-poll-timeout
-           :with-poll-select))
+           :mailbox-messages-dequeued
+           :mailbox-messages-dropped))
 
 (defpackage erlangen.agent
   (:documentation
@@ -34,11 +29,11 @@
   without a blocking version of {send}.")
   (:use :cl
         :ccl
-        :erlangen.mailbox
-        :erlangen.conditions
-        :erlangen.algorithms)
-  (:shadowing-import-from :erlangen.conditions :timeout)
+        :erlangen.mailbox)
   (:export :agent
+           :agent-stats
+           :agent-links
+           :agent-monitors
            :spawn
            :add-link
            :remove-link
@@ -47,6 +42,7 @@
            :send
            :receive
            :exit
+           :notify
            :*default-mailbox-size*
            :*agent-debug*))
 
@@ -61,12 +57,18 @@
            :registered
            :agent-by-name))
 
+(defpackage erlangen.algorithms
+  (:documentation "Generic algorithms used in Erlangen.")
+  (:use :cl)
+  (:export :repeat-pace
+           :repeat-rate))
+
 (defpackage erlangen.macros
-    (:documentation "Erlangen core macros.")
-    (:use :cl
-          :erlangen.agent
-          :erlangen.algorithms)
-    (:export :select))
+  (:documentation "Erlangen core macros.")
+  (:use :cl
+        :erlangen.agent
+        :erlangen.algorithms)
+  (:export :select))
 
 (defpackage erlangen.distribution.call
   (:documentation
@@ -92,16 +94,17 @@
   (:use :cl
         :ccl
         :erlangen.distribution.protocol.buffers)
-  (:export :*i/o-timeout*
-           :make-socket*
-           :with-socket
-           :do-request
-           :send-hello
+  (:export :send-hello
            :assert-protocol-version
            :write-error-reply
            :read-error-reply
            :write-ack-reply
-           :read-ack-reply))
+           :read-ack-reply
+           :protocol-error
+           :protocol-error-description
+           :make-socket*
+           :with-socket
+           :do-request))
 
 (defpackage erlangen.distribution.protocol.port-mapper
   (:documentation "Port mapper portion of the distribution protocol.")
@@ -128,7 +131,10 @@
            :node-name
            :decode-id
            :agent-id
-           :find-agent))
+           :find-agent
+           :reserve-id
+           :claim-id
+           :bind-id))
 
 (defpackage erlangen.distribution.protocol.node
   (:documentation "Node portion of the distribution protocol.")
@@ -143,11 +149,13 @@
         :erlangen.distribution.protocol.port-mapper)
   (:export :make-node-server
            :clear-connections
+           :connection-stats
            :remote-spawn
            :remote-send
            :remote-link
            :remote-unlink
-           :remote-exit))
+           :remote-exit
+           :remote-notify))
 
 (defpackage erlangen
   (:documentation
@@ -156,6 +164,7 @@
         :erlangen.agent
         :erlangen.registry
         :erlangen.conditions
+        :erlangen.algorithms
         :erlangen.macros
         :erlangen.distribution.call
         :erlangen.distribution.id
@@ -165,6 +174,7 @@
   ;; agents) are redefined in this package and thus shadowed.
   (:shadow :send
            :exit
+           :notify
            :link
            :unlink
            :spawn)
@@ -174,7 +184,6 @@
            :link
            :unlink
            :send
-           :send-error
            :receive
            :timeout
            :exit
@@ -185,3 +194,21 @@
            :node
            :*default-mailbox-size*
            :*agent-debug*))
+
+(defpackage erlangen.management
+  (:documentation
+   "Management extensions for Erlangen including functions for agent tree
+introspection, and retrieval of statistics for agents and remote connections.")
+  (:use :cl
+        :ccl
+        :erlangen.agent
+        :erlangen.mailbox
+        :erlangen.distribution.protocol.node)
+  (:export :agent-stats
+           :agent-tree
+           :root
+           :linked
+           :monitored
+           :process-agent
+           :flush-messages
+           :connection-stats))

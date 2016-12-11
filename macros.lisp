@@ -50,11 +50,16 @@ optionally :RECEIVE clause."
    messages."
   (multiple-value-bind (clauses receive-clause)
       (parse-select-clauses clauses)
-    `(progn
-       (with-poll-select 1e-2
-         ,@clauses
-         ,(if receive-clause
-              (destructuring-bind (vars &rest body) receive-clause
-                `((receive-nowait) (,message-p-sym ,@vars)
-                  ,@body))
-              '((receive-nowait) ()))))))
+    `(block select
+       (repeat-pace
+        (lambda ()
+          ,@(loop for clause in clauses collect
+                 (destructuring-bind (form &optional vars &rest body) clause
+                   `(multiple-value-bind ,vars ,form
+                      (when ,(first vars)
+                        (return-from select (progn ,@body))))))
+          ,(if receive-clause
+               (destructuring-bind (vars &rest body) receive-clause
+                 `(multiple-value-bind (,message-p-sym ,@vars) (receive-nowait)
+                    (return-from select (progn ,@body))))
+               '(receive-nowait)))))))

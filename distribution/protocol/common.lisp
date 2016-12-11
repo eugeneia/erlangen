@@ -6,10 +6,53 @@
   "Protocol version implemented by ERLANGEN.DISTRIBUTION.PROTOCOL.*; to
 be bumped in the event of changes to the protocol.")
 
-(defparameter *i/o-timeout* (* 10 1000) ; There is a bug in CCL (1.10?)
-                                        ; where TCP stream timeouts are
-                                        ; interpreted as millisecond
-                                        ; values.
+;; Basic protocol messages. HELLO-REPLY is sent to connecting clients (as
+;; a response to a protocol setup request implied by connection
+;; establishment). It contains the protocol version offered by the
+;; server. If the client does not implement the protocol version
+;; specified by the server's HELLO-REPLY it must close the connection.
+;;
+;; ERROR-REPLY is a generic reply sent to clients when a request can not
+;; be successfully served for any reason. It contains a string that
+;; further describes the failure reason.
+;;
+;; ACK-REPLY is a generic reply sent to clients when a request was
+;; successfully processed by the server. It contains no additional
+;; information. It is generally used to acknowledge requests that do not
+;; yield any datum.
+(define-message #x00 hello-reply (version integer))
+(define-message #x01 error-reply (description string))
+(define-message #x02 ack-reply)
+
+(define-condition protocol-error (error)
+  ((description
+    :initform (error "Must supply DESCRIPTION.")
+    :initarg :description
+    :reader protocol-error-description
+    :documentation "Description string of ERROR-REPLY."))
+  (:documentation
+   "Errors of type `protocol-error' are signaled whenever an ERROR-REPLY was
+    received.")
+  (:report (lambda (p-e stream)
+             (write-string (protocol-error-description p-e) stream))))
+
+(defun send-hello (connection)
+  "Sends HELLO-REPLY on CONNECTION."
+  (write-hello-reply *protocol-version* connection))
+
+(defun assert-protocol-version (socket)
+  "Receives HELLO-REPLY on SOCKET. If the specified protocol version does
+not match this implementation an error is signaled."
+  (let ((remote-version (read-message* #x00 'read-hello-reply socket)))
+    (unless (= remote-version *protocol-version*)
+      (error "Protocol version mismatch (local: ~a, remote ~a)."
+             *protocol-version* remote-version)))
+  (values))
+
+(defparameter *i/o-timeout* #-ccl-1.11 (* 10 1000) ; There is a bug in CCL
+                            #+ccl-1.11 10          ; (1.10?) where TCP stream
+                                                   ; timeouts are interpreted
+                                                   ; as millisecond values.
   "Default input/output timeout for TCP stream used throughout the
 protocol implementation.")
 
@@ -35,46 +78,15 @@ the form (TYPE REPLY-FN) where TYPE is an unsigned integer and REPLY-FN
 is the reply reader to be called. Sends REQUEST over socket bound to
 SOCKET-VAR. If EXPECTED-REPLY is supplied reads reply as specified,
 otherwise expects ACK-REPLY. If reply is an ERROR-REPLY the appropriate
-error is signaled."
+`protocol-error' is signaled."
   (check-type socket-var symbol)
   `(progn
      ,`(,@request ,socket-var)
      (force-output ,socket-var)
      (multiple-value-bind (type reply) (read-message ,socket-var)
        (ecase type
-         (#x01 (error (read-error-reply reply)))
+         (#x01 (error 'protocol-error :description (read-error-reply reply)))
          ,(if expected-reply
               (destructuring-bind (reply-id reply-reader) expected-reply
                 `(,reply-id (,reply-reader reply)))
               '(#x02 (values)))))))
-
-;; Basic protocol messages. HELLO-REPLY is sent to connecting clients (as
-;; a response to a protocol setup request implied by connection
-;; establishment). It contains the protocol version offered by the
-;; server. If the client does not implement the protocol version
-;; specified by the server's HELLO-REPLY it must close the connection.
-;;
-;; ERROR-REPLY is a generic reply sent to clients when a request can not
-;; be successfully served for any reason. It contains a string that
-;; further describes the failure reason.
-;;
-;; ACK-REPLY is a generic reply sent to clients when a request was
-;; successfully processed by the server. It contains no additional
-;; information. It is generally used to acknowledge requests that do not
-;; yield any datum.
-(define-message #x00 hello-reply (version integer))
-(define-message #x01 error-reply (description string))
-(define-message #x02 ack-reply)
-
-(defun send-hello (connection)
-  "Sends HELLO-REPLY on CONNECTION."
-  (write-hello-reply *protocol-version* connection))
-
-(defun assert-protocol-version (socket)
-  "Receives HELLO-REPLY on SOCKET. If the specified protocol version does
-not match this implementation an error is signaled."
-  (let ((remote-version (read-message* #x00 'read-hello-reply socket)))
-    (unless (= remote-version *protocol-version*)
-      (error "Protocol version mismatch (local: ~a, remote ~a)."
-             *protocol-version* remote-version)))
-  (values))

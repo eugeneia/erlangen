@@ -8,7 +8,7 @@ changes._
 ## Documentation
 
  * [Manual and API Documentation](http://mr.gy/software/erlangen/api.html)
-
+ * [Erlangen: introduction](http://mr.gy/blog/erlangen-intro.html)
 
 ## Dependencies
 
@@ -58,7 +58,8 @@ the result vector. Here is roughly how `parallel-map` works:
      contains the chunk’s result, and inserts them into the final result vector
 
 The worker agents initially do nothing at all. They each just wait to receive a
-function to execute, and quit when they are done.
+function to execute, and quit when they are done. Note that we use the [Trivia](https://github.com/guicho271828/trivia)
+pattern matching library to match received messages.
 
 ```
 (defun worker ()
@@ -122,7 +123,6 @@ shut down.
           for worker in workers do
          (ematch (receive)
            ((list (type agent) :ok start end chunk-result)
-            (incf n-results)
             (replace results chunk-result :start1 start :end1 end))
            ((list (type agent) :exit reason)
             (exit reason)))
@@ -141,18 +141,18 @@ Now we can spawn `parallel-map` agents like this
 
 What fun are agents if they aren’t distributed over a network? Erlangen comes
 with support for distribution via TCP/IP built in. Each instance of Erlangen
-can act as a *node*, and talk to other Erlangen nodes. But first, there needs
-to be a *port mapper* on the network for nodes to find each other. To build and
-run the Erlangen port mapper, execute the commands
+can act as a *node*, and talk to other Erlangen nodes. In order to facilitate
+port discovery of of remote nodes, there needs to be a *port mapper* running on
+the host. To build and run the Erlangen port mapper, execute the commands
 
 ```
 make bin/erlangen-port-mapper
 bin/erlangen-port-mapper localhost &
 ```
 
-in a shell in the root of the Erlangen repository. Now build the Erlangen kernel
-in the same way to help quickly start additional Erlangen instances, and use it
-to start a node named *map-node*.
+in a shell in the root of the Erlangen repository. Now build the Erlangen
+kernel in the same way to help quickly start additional Erlangen instances, and
+use it to start a node named *map-node*.
 
 ```
 make bin/erlangen-kernel
@@ -160,7 +160,7 @@ bin/erlangen-kernel -n -e '(node :name "map-node")'
 ```
 
 Hint: if you use Emacs, you can start a new Erlangen instance with Slime with
-*C-u M-x slime RET /path/to/erlangen-kernel*.
+`C-u M-x slime RET /path/to/erlangen-kernel`.
 
 For the following example to work your hostname as reported by
 `machine-instance` must resolve to the local host. You might need to edit your
@@ -174,7 +174,7 @@ With that out of the way, we can also make our initial Erlangen instance a
 node, and offload some work to *map-node*:
 
 ```
-(spawn '(node))
+(spawn 'node)
 (spawn '(erlangen.examples:parallel-map 1+ #(2 4 6 8 10 12 14))
        :attach :monitor
        :node "map-node")
@@ -185,4 +185,3 @@ node, and offload some work to *map-node*:
 What happened? We spawned an agent on the remote *map-node* instance to run
 `parallel-map`, and received its exit notification transparently over the
 network.
-
