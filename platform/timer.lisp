@@ -8,7 +8,7 @@
 
 (defun find-or-insert-ticklist% (tick ticks)
   (cond ((or (null (cdr ticks)) (> (caadr ticks) tick))
-         (let ((ticklist (cons tick nil)))
+         (let ((ticklist (list tick)))
            (setf (cdr ticks) (cons ticklist (cdr ticks)))
            ticklist))
         ((= (caadr ticks) tick)
@@ -19,9 +19,7 @@
 (defun find-or-insert-ticklist (tick)
   (if *ticks*
       (find-or-insert-ticklist% tick *ticks*)
-      (let ((ticklist (cons tick nil)))
-        (push ticklist *ticks*)
-        ticklist)))
+      (setf *ticks* (list tick))))
 
 (defun insert-timer (timer tick)
   (push timer (cdr (find-or-insert-ticklist tick))))
@@ -55,10 +53,14 @@
                                  (+ (funcall time-function) repeat)
                                  (funcall time-function))))))))
 
-(defun timer (&key (time-function 'get-universal-time) (sleep-function 'sleep))
+(defun timer (&key (time-function 'get-universal-time)
+                   (sleep-function 'sleep)
+                   (max-sleep 1))
   (register :timer)
   (let ((*ticks* nil))
     (loop do
          (pop-timers (funcall time-function))
          (receive-timers time-function)
-         (funcall sleep-function (- (caar *ticks*) (funcall time-function))))))
+         (funcall sleep-function
+                  (max (- (caar *ticks*) (funcall time-function))
+                       max-sleep)))))
