@@ -4,7 +4,7 @@
   :description
   "Distributed, asychronous message passing system for Clozure Common Lisp."
   :author "Max Rottenkolber <max@mr.gy>"
-  :license "Not licensed"
+  :license "GNU Affero General Public License"
   :components ((:file "ccl")
                (:file "packages")
                (:file "conditions"
