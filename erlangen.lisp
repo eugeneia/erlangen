@@ -53,8 +53,12 @@ for ERLANGEN.AGENT."
     (keyword (erlangen.agent:notify exited reason (agent-by-name agent)))
     (string (remote-notify (agent-id exited) reason agent))))
 
-(defun spawn (function &key attach (mailbox-size *default-mailbox-size*)
-                            node (host (host-name)))
+(defun spawn (function
+              &rest args
+              &key
+                attach (mailbox-size *default-mailbox-size*)
+                (class 'erlangen.agent:agent) node (host (host-name))
+              &allow-other-keys)
   "*Arguments and Values:*
 
    _function_—a _function designator_ or a _call_.
@@ -64,10 +68,15 @@ for ERLANGEN.AGENT."
    _mailbox-size_—a positive _unsigned integer_. The default is
    {*default-mailbox-size*}.
 
+   _class_-name of the class of the agent to create.  Only supported for
+   local agents.  Defaults to {'erlangen.agent:agent}.
+
    _node_—a _node name_ or {nil}. The default is {nil}.
 
    _host_—a _host_ as accepted by [resolve-address](http://ccl.clozure.com/docs/ccl.html#f_resolve-address).
    The default is the local host name as reported by {machine-instance}.
+
+   Additional keyword arguments may be specified to initialize the agent instance.
 
    *Description:*
 
@@ -88,11 +97,13 @@ for ERLANGEN.AGENT."
       (erlangen.agent:spawn (etypecase function
                               ((or function symbol) function)
                               (call (make-function function)))
+                            :class class
                             :attach attach
                             :mailbox-size mailbox-size
                             :agent-symbol (typecase function
                                             (symbol function)
-                                            (call (first function))))
+                                            (call (first function)))
+                            :instance-args args)
       (let ((agent (remote-spawn host node
                                  (if (symbolp function)
                                      (list function)
