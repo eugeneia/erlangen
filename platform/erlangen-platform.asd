@@ -4,8 +4,9 @@
   :description
   "Reusable component framework for Erlangen."
   :author "Max Rottenkolber <max@mr.gy>"
-  :license "Not licensed"
-  :components ((:file "log")
-               (:file "supervisor")
-               (:file "server"))
+  :license "GNU Affero General Public License"
+  :components ((:file "supervisor")
+               (:file "logger")
+               (:file "server")
+               (:file "timer"))
   :depends-on ("erlangen" "trivia"))

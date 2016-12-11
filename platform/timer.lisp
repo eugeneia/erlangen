@@ -53,14 +53,17 @@
                                  (+ (funcall time-function) repeat)
                                  (funcall time-function))))))))
 
-(defun timer (&key (time-function 'get-universal-time)
+(defun timer (&key (name :timer)
+                   (time-function 'get-universal-time)
                    (sleep-function 'sleep)
                    (max-sleep 1))
-  (register :timer)
-  (let ((*ticks* nil))
-    (loop do
-         (pop-timers (funcall time-function))
-         (receive-timers time-function)
-         (funcall sleep-function
-                  (max (- (caar *ticks*) (funcall time-function))
-                       max-sleep)))))
+  (register name)
+  (unwind-protect
+       (let ((*ticks* nil))
+         (loop do
+              (pop-timers (funcall time-function))
+              (receive-timers time-function)
+              (funcall sleep-function
+                       (max (- (caar *ticks*) (funcall time-function))
+                            max-sleep))))
+    (unregister name)))

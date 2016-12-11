@@ -1,6 +1,6 @@
 (defpackage erlangen-platform.server
   (:use :cl :erlangen :trivia)
-  (:export :make-server
+  (:export :server
            :cast
            :call
            :no-reply))
@@ -16,17 +16,16 @@
                          new-state))
     (otherwise state)))
 
-(defun make-server (&key init serve)
+(defun server (&key init serve)
   "DOCUMENT ME! I AM PUBLIC."
-  (lambda ()
-    (loop for state = (funcall init)
-       then (handle-request (receive) serve state))))
+  (loop for state = (funcall init)
+     then (handle-request (receive) serve state)))
 
 (defun cast (server query)
   "DOCUMENT ME! I AM PUBLIC."
   (send (cons (agent) query) server))
 
-(defun call (server query)
+(defun call (server query &key timeout)
   "DOCUMENT ME! I AM PUBLIC."
   (cast server query)
-  (receive))
+  (receive :timeout timeout))

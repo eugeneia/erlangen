@@ -2,7 +2,7 @@
 
 (defpackage erlangen-platform.log
   (:use :cl :erlangen)
-  (:export :make-log
+  (:export :logger
            :write-log
            :make-timestamp
            :to-standard-output))
@@ -20,7 +20,7 @@
      {to-standard-output} prints _message_ to {*standard-output*}"
     (print message standard-output)))
 
-(defun make-log (&key (name :log) (log-function 'to-standard-output))
+(defun logger (&key (name :log) (log-function 'to-standard-output))
   "*Arguments and Values:*
 
    _name_—a _keyword_. Default is {:log}.
@@ -30,13 +30,12 @@
 
    *Description*:
 
-   {make-log} returns a log agent that will, when spawned, register
-   itself under _name_ and call _log-function_ on messages it receives."
-  (lambda ()
-    (ignore-errors (unregister name))
-    (register name)
-    (loop for message = (receive)
-       do (ignore-errors (funcall log-function message)))))
+   {logger} registers itself for _name_, and calls _log-function_ on messages
+   it receives."
+  (register name)
+  (unwind-protect (loop for message = (receive)
+                     do (ignore-errors (funcall log-function message)))
+    (unregister name)))
 
 (defun make-timestamp (&optional (universal-time (get-universal-time)))
   "*Arguments and Values:*
