@@ -9,8 +9,8 @@
   (open? t :type symbol)
   (lock (make-lock "erlangen.mailbox"))
   (enqueued (make-semaphore))
-  (messages-dequeued 0 :type (integer 0))
-  (messages-dropped 0 :type (integer 0)))
+  (messages-dequeued 0 :type (unsigned-byte 60))
+  (messages-dropped 0 :type (unsigned-byte 60)))
 
 (defun make-mailbox (size)
   "Return a new empty mailbox of SIZE."

@@ -30,8 +30,8 @@
   (monitors nil :type list)
   (lock (make-lock "erlangen.agent"))
   (symbol nil :type symbol)
-  (birthtime (get-universal-time) :type (integer 0))
-  (deathtime 0 :type (integer 0)))
+  (birthtime (get-universal-time) :type (unsigned-byte 60))
+  (deathtime 0 :type (unsigned-byte 60)))
 
 (defmethod print-object ((o agent) stream)
   (if (agent-symbol o)

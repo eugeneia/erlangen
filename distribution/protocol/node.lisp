@@ -177,8 +177,8 @@ requests. Additionally, it contains a CREATION-TIME and an ERRORS counter."
   (deferred nil :type list)
   (deferred-tail nil :type (or cons null))
   (lock (make-lock "…node::connection") :type lock)
-  (creation-time (get-universal-time) :type (integer 0))
-  (errors 0 :type (integer 0)))
+  (creation-time (get-universal-time) :type (unsigned-byte 60))
+  (errors 0 :type (unsigned-byte 60)))
 
 (defun connection-stats (&optional host node)
   "→ _stats-for-connections_
