@@ -13,8 +13,8 @@
 (defmacro with-pseudo-agent ((var &key (mailbox-size
                                         '*default-mailbox-size*))
                              &body body)
-  `(let* ((,var (erlangen.agent::make-agent%
-                 :mailbox (make-mailbox ,mailbox-size)))
+  `(let* ((,var (make-instance 'erlangen.agent::agent
+                               :mailbox (make-mailbox ,mailbox-size)))
           (erlangen.agent::*agent* ,var))
      ,@body))
 
