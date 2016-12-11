@@ -101,7 +101,7 @@
 
    _process_—a _process_.
 
-   _timeout_—a positive _integer_ denoting a time interval in seconds. The
+   _timeout_—a non-negative _real_ denoting a time interval in seconds. The
    default is 1.
 
    _agent_—an _agent_ or {nil}.

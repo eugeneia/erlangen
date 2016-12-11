@@ -195,8 +195,8 @@ requests. Additionally, it contains a CREATION-TIME and an ERRORS counter."
    connection. Each element is a _list_ of four elements containing the host
    name, node name, _errors_, and _established_ of the respective connection.
 
-   _errors_—a positive _integer_ denoting the number of errors on the matching
-   connection.
+   _errors_—a non-negative _integer_ denoting the number of errors on the
+   matching connection.
 
    _established_—a _universal time_ denoting the time when the matching
    connection was initially established, or {nil} denoting that the connection

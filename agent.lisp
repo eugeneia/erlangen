@@ -47,10 +47,10 @@
 
    _agent_—an _agent_.
 
-   _messages-received_—a positive _integer_ denoting the number of messages
+   _messages-received_—a non-negative _integer_ denoting the number of messages
    received by _agent_.
 
-   _messages-dropped_—a positive _integer_ denoting the number of messages
+   _messages-dropped_—a non-negative _integer_ denoting the number of messages
    dropped by _agent_ because its mailbox was full.
 
    _birthtime_—a _universal time_ denoting the time when _agent_ was started.
@@ -133,7 +133,7 @@
 (defun receive (&key timeout)
   "*Arguments and Values:*
 
-   _timeout_—a positive _number_ denoting a time interval in seconds.
+   _timeout_—a non-negative _real_ denoting a time interval in seconds.
 
    *Description*:
 
