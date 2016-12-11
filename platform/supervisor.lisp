@@ -58,18 +58,17 @@
            (declare (ignore values))
            (let ((child (find agent *children* :key 'child-agent)))
              (when (and child (restartable-p child status))
+               (check-restart-intensity)
                (funcall strategy children child notice)))))))
 
 (defun one-for-one (children failed notice)
   (declare (ignore children notice))
-  (check-restart-intensity)
   (start-child failed))
 
 (defun one-for-all (children failed notice)
   (loop for child in children do
        (unless (eq child failed)
          (exit notice (child-agent child)))
-       (check-restart-intensity)
        (start-child child)))
 
 (defun rest-for-one (children failed notice)
@@ -77,9 +76,7 @@
      for child in children
      when rest-p do
        (exit notice (child-agent child))
-       (check-restart-intensity)
        (start-child child)
      when (eq child failed) do
-       (check-restart-intensity)
        (start-child failed)
        (setf rest-p t)))
