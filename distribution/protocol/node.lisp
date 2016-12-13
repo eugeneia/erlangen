@@ -299,7 +299,8 @@ to NODE of HOST. If PERSIST-P is non-nil REQUEST will be persistent."
                (incf (connection-errors ,connection-sym))
                ,(if persist-p
                     `(defer-request (lambda (,var) ,@request) ,connection-sym)
-                    `(error ,error-sym)))))
+                    `(error ,error-sym))
+               (values))))
          (values))))
 
 (defun remote-spawn (host node call parent attach mailbox-size)
@@ -322,7 +323,8 @@ and MAILBOX-SIZE."
   (multiple-value-bind (host node) (decode-id id)
     (ignore-errors (with-connection (socket host node)
                      (write-send-request message id socket)
-                     (force-output socket)))))
+                     (force-output socket))))
+  (values))
 
 (defun remote-link (remote-id local-id mode)
   "Links remote agent by REMOTE-ID to agent by LOCAL-ID using MODE."
