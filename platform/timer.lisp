@@ -34,8 +34,7 @@
                             (send event agent)
                             (when repeat
                               (insert-timer timer (+ current-tick repeat))))
-              (send-error (e)
-                (declare (ignore e)))))))
+              (error (e) (declare (ignore e)))))))
 
 (defun receive-timers (time-function)
   (loop for timer = (if *ticks*
