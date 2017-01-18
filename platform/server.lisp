@@ -16,10 +16,10 @@
                          new-state))
     (otherwise state)))
 
-(defun server (&key init serve)
+(defun server (serve &key init)
   "DOCUMENT ME! I AM PUBLIC."
-  (loop for state = (funcall init)
-     then (handle-request (receive) serve state)))
+  (check-type serve (or function (and symbol (satisfies fboundp))))
+  (loop for state = init then (handle-request (receive) serve state)))
 
 (defun cast (server query)
   "DOCUMENT ME! I AM PUBLIC."
