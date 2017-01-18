@@ -4,7 +4,10 @@
 
 (in-package :erlangen-platform.timer)
 
-(defvar *ticks*)
+(defvar *ticks*) ; ( TICKS . ((tick . timers...) ...))
+
+;;; (cdr   <ticks>) - next ticklist
+;;; (caadr <ticks>) - next tick
 
 (defun find-or-insert-ticklist% (tick ticks)
   (cond ((or (null (cdr ticks)) (> (caadr ticks) tick))
@@ -17,27 +20,28 @@
          (find-or-insert-ticklist% tick (cdr ticks)))))
 
 (defun find-or-insert-ticklist (tick)
-  (if *ticks*
+  (if (cdr *ticks*)
       (find-or-insert-ticklist% tick *ticks*)
-      (setf *ticks* (list tick))))
+      (let ((ticklist (list tick)))
+        (push ticklist (cdr *ticks*))
+        ticklist)))
 
 (defun insert-timer (timer tick)
   (push timer (cdr (find-or-insert-ticklist tick))))
 
 (defun pop-timers (tick)
-  (loop while (and *ticks* (<= (caar *ticks*) tick))
-        for (current-tick . timers) = (pop *ticks*) do
+  (loop while (and (cdr *ticks*) (<= (caadr *ticks*) tick))
+        for (current-tick . timers) = (pop (cdr *ticks*)) do
        (loop for timer in timers do
-            (handler-case (destructuring-bind (event agent &key start repeat)
-                              timer
-                            (declare (ignore start))
-                            (send event agent)
-                            (when repeat
-                              (insert-timer timer (+ current-tick repeat))))
-              (error (e) (declare (ignore e)))))))
+            (destructuring-bind (event agent &key start repeat)
+                timer
+              (declare (ignore start))
+              (ignore-errors (send event agent))
+              (when repeat
+                (insert-timer timer (+ current-tick repeat)))))))
 
 (defun receive-timers (time-function)
-  (loop for timer = (if *ticks*
+  (loop for timer = (if (cdr *ticks*)
                         (ignore-errors (receive :timeout 0))
                         (receive))
      while timer do
@@ -58,11 +62,11 @@
                    (max-sleep 1))
   (register name)
   (unwind-protect
-       (let ((*ticks* nil))
+       (let ((*ticks* (list 'ticks)))
          (loop do
               (pop-timers (funcall time-function))
               (receive-timers time-function)
               (funcall sleep-function
-                       (max (- (caar *ticks*) (funcall time-function))
+                       (min (- (caadr *ticks*) (funcall time-function))
                             max-sleep))))
     (unregister name)))
