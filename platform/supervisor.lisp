@@ -16,9 +16,9 @@
   (destructuring-bind (id function &key (restart :permanent) spawn-args)
       childspec
     (check-type id keyword)
-    (check-type function (or function call))
+    (check-type function (or function (and symbol (satisfies fboundp)) call))
     (check-type restart (member :permanent :transient :temporary))
-    (check-type spawn-args (integer 1))
+    (check-type spawn-args list)
     (make-child% :id id
                  :function function
                  :restart restart
@@ -56,7 +56,7 @@
     (loop for notice = (receive) do
          (destructuring-bind (agent status &rest values) notice
            (declare (ignore values))
-           (let ((child (find agent *children* :key 'child-agent)))
+           (let ((child (find agent children :key 'child-agent)))
              (when (and child (restartable-p child status))
                (check-restart-intensity)
                (funcall strategy children child notice)))))))
