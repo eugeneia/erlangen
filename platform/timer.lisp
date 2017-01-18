@@ -6,7 +6,8 @@
 
 (defvar *ticks*) ; ( TICKS . ((tick . timers...) ...))
 
-;;; (cdr   <ticks>) - next ticklist
+;;; (cdr   <ticks>) - ticks
+;;; (cadr  <ticks>) - next ticklist
 ;;; (caadr <ticks>) - next tick
 
 (defun find-or-insert-ticklist% (tick ticks)
