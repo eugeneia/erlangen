@@ -13,14 +13,11 @@
      else return (- (get-internal-real-time) start)))
 
 (defun message-ring (n-agents n-hops)
-  (let ((next-hop (loop for i from 1 to n-agents
-                        for next-hop = (agent)
-                          then (spawn (lambda () (ring-hop next-hop))
-                                        ; ^ if we use a CALL here we crawl
-                                      :attach :link)
-                     finally (return next-hop))))
-    (send (cons n-hops (get-internal-real-time)) next-hop)
-    (ring-hop next-hop)))
+  (loop for i from 1 to n-agents
+        for next-hop = (agent) then (spawn `(ring-hop ,next-hop) :attach :link)
+     finally
+       (send (cons n-hops (get-internal-real-time)) next-hop)
+       (ring-hop next-hop)))
 
 (defun message-ring-benchmark (&key (n-agents 10)
                                     (n-hops 1000000)
@@ -37,4 +34,3 @@
             n-hops n-agents seconds)
     (format t "That’s ~f messages per second, or ~f μs per hop.~%"
             (/ n-hops seconds) (* 1000000 (/ seconds n-hops)))))
-
