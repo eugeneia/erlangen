@@ -16,6 +16,7 @@
   (let ((next-hop (loop for i from 1 to n-agents
                         for next-hop = (agent)
                           then (spawn (lambda () (ring-hop next-hop))
+                                        ; ^ if we use a CALL here we crawl
                                       :attach :link)
                      finally (return next-hop))))
     (send (cons n-hops (get-internal-real-time)) next-hop)
@@ -26,7 +27,7 @@
                                     (timeout 60))
   (check-type n-agents (integer 2))
   (check-type n-hops (integer 1))
-  (spawn (lambda () (message-ring n-agents n-hops)) :attach :monitor)
+  (spawn `(message-ring ,n-agents ,n-hops) :attach :monitor)
   (destructuring-bind (agent exit ok duration
                        &aux (seconds (/ duration
                                         internal-time-units-per-second)))
