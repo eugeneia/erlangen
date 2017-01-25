@@ -8,19 +8,15 @@
   (when (intersection *command-line-argument-list*
                       '("-h" "-help" "--help")
                       :test 'string=)
-    (princ "Usage: erlangen-port-mapper [host] [registry-port] [directory-port]
+    (princ "Usage: erlangen-port-mapper [host]
        erlangen-port-mapper -h|-help|--help")
     (quit 0))
-  (destructuring-bind (exe &optional host rport dport)
+  (destructuring-bind (exe &optional host)
       *command-line-argument-list*
     (declare (ignore exe))
     (apply 'erlangen.distribution.protocol.port-mapper:port-mapper
-           (append (when host
-                     `(:registry-host ,host :directory-host ,host))
-                   (when rport
-                     `(:registry-port ,(parse-integer rport)))
-                   (when dport
-                     `(:directory-port ,(parse-integer dport)))))))
+           (when host
+             `(:directory-host ,host)))))
 
 (defclass erlangen-port-mapper (ccl::application)
   ((command-line-arguments :initform nil)))

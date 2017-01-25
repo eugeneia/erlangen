@@ -2,10 +2,9 @@
 
 (in-package :erlangen.distribution.call)
 
-(defun callable-p (call)
-  "Predicate to check if CALL is callable."
-  (and (listp call)
-       (symbolp (first call))))
+(defun proper-list-p (cons &aux (cdr (cdr cons)))
+  (or (and (consp cdr) (proper-list-p cdr))
+      (null cdr)))
 
 (deftype call ()
   "*Syntax:*
@@ -24,11 +23,10 @@
    _node_. A _call_ is a _list_ whose first element is a _symbol_
    denoting a _function_ and whose remaining elements are arguments to be
    applied to the denoted _function_."
-  '(satisfies callable-p))
+  '(and (cons (and symbol (not null))) (satisfies proper-list-p)))
 
 (defun make-function (call)
   "Return function with no arguments which applies CALL."
   (check-type call call)
-  (destructuring-bind (function &rest arguments) call
-    (lambda ()
-      (apply function arguments))))
+  (lambda ()
+    (apply 'funcall call)))
