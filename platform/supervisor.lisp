@@ -1,7 +1,7 @@
 ;;;; Generic supervisor agent.
 
 (defpackage erlangen-platform.supervisor
-  (:use :cl :erlangen)
+  (:use :cl :erlangen :erlangen-platform.log)
   (:export :supervisor
            :one-for-one
            :one-for-all
@@ -25,9 +25,15 @@
                  :spawn-args spawn-args)))
 
 (defun start-child (child)
-  (with-slots (function spawn-args agent) child
+  (with-slots (id function spawn-args agent) child
+    (write-log* `(,id :start))
     (setf agent (apply 'spawn function :attach :monitor spawn-args)))
   child)
+
+(defun stop-child (child reason)
+  (with-slots (id agent) child
+    (write-log* `(,id :stop))
+    (exit reason agent)))
 
 (defun restartable-p (child status)
   (case (child-restart child)
@@ -44,20 +50,23 @@
 
 (defun supervisor (childspecs &key (strategy 'one-for-one)
                                    (intensity 1)
-                                   (period 5))
+                                   (period 5)
+                                   log)
   "DOCUMENT ME! I AM PUBLIC!"
   (check-type intensity (integer 0))
   (check-type period (integer 1))
-  (let ((*maximum-intensity* (/ intensity period))
-        (*restarts* 0)
-        (*start* (get-universal-time))
-        (children (loop for childspec in childspecs collect
-                       (start-child (make-child childspec)))))
+  (let* ((*maximum-intensity* (/ intensity period))
+         (*restarts* 0)
+         (*start* (get-universal-time))
+         (*log* log)
+         (children (loop for childspec in childspecs collect
+                        (start-child (make-child childspec)))))
     (loop for notice = (receive) do
          (destructuring-bind (agent status &rest values) notice
-           (declare (ignore values))
            (let ((child (find agent children :key 'child-agent)))
-             (when (and child (restartable-p child status))
+             (check-type child child)
+             (write-log* (list* (child-id child) status values))
+             (when (restartable-p child status)
                (check-restart-intensity)
                (funcall strategy children child notice)))))))
 
@@ -68,15 +77,15 @@
 (defun one-for-all (children failed notice)
   (loop for child in children do
        (unless (eq child failed)
-         (exit notice (child-agent child)))
+         (stop-child child notice))
        (start-child child)))
 
 (defun rest-for-one (children failed notice)
   (loop with rest-p = nil
      for child in children
-     when rest-p do
-       (exit notice (child-agent child))
-       (start-child child)
      when (eq child failed) do
        (start-child failed)
-       (setf rest-p t)))
+       (setf rest-p t)
+     when rest-p do
+       (stop-child child notice)
+       (start-child child)))

@@ -1,5 +1,5 @@
 (defpackage erlangen-platform.timer
-  (:use :cl :erlangen)
+  (:use :cl :erlangen :erlangen-platform.log)
   (:export :timer))
 
 (in-package :erlangen-platform.timer)
@@ -28,18 +28,19 @@
         ticklist)))
 
 (defun insert-timer (timer tick)
+  (write-log* (list* :set timer))
   (push timer (cdr (find-or-insert-ticklist tick))))
 
 (defun pop-timers (tick)
   (loop while (and (cdr *ticks*) (<= (caadr *ticks*) tick))
-        for (current-tick . timers) = (pop (cdr *ticks*)) do
+        for (start . timers) = (pop (cdr *ticks*)) do
        (loop for timer in timers do
-            (destructuring-bind (event agent &key start repeat)
+            (write-log* (list* :emit tick timer))
+            (destructuring-bind (event agent &key repeat &allow-other-keys)
                 timer
-              (declare (ignore start))
               (ignore-errors (send event agent))
               (when repeat
-                (insert-timer timer (+ current-tick repeat)))))))
+                (insert-timer timer (+ start repeat)))))))
 
 (defun receive-timers (time-function)
   (loop for timer = (if (cdr *ticks*)
@@ -60,10 +61,12 @@
 (defun timer (&key (name :timer)
                    (time-function 'get-universal-time)
                    (sleep-function 'sleep)
-                   (max-sleep 1))
+                   (max-sleep 1)
+                   log)
   (register name)
   (unwind-protect
-       (let ((*ticks* (list 'ticks)))
+       (let ((*ticks* (list 'ticks))
+             (*log* log))
          (loop do
               (pop-timers (funcall time-function))
               (receive-timers time-function)
