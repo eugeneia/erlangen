@@ -2,12 +2,24 @@
 
 (defpackage erlangen-platform.log
   (:use :cl :erlangen)
-  (:export :logger
+  (:export :*log*
+           :logger
            :write-log
+           :write-log*
            :make-timestamp
            :to-standard-output))
 
 (in-package :erlangen-platform.log)
+
+(defvar *log* :log
+  "*Value Type:*
+
+   an _agent_.
+
+   *Description:*
+
+   This _variable_ can be _bound_ or _assigned_ in order to change the default
+   destination for log entries written by {write-log}.")
 
 (let ((standard-output *standard-output*))
   (defun to-standard-output (message)
@@ -57,15 +69,33 @@
     (format nil "~4,'0d-~2,'0d-~2,'0d ~2,'0d:~2,'0d:~2,'0d"
             year month date hour minute second)))
 
-(defun write-log (message &optional (log :log))
+(defun write-log (message &optional (log *log*))
   "*Arguments and Values:*
 
    _message_—an _object_.
 
-   _log_—an _agent_. Default is {:log}.
+   _log_—an _agent_. Default is the _value_ of {*log*}.
 
    *Description*:
 
    {write-log} tags _message_ with the _calling agent_ and a _timestamp_
    and sends it to _log_."
   (send (list* (agent) (make-timestamp) message) log))
+
+(defmacro write-log* (message &optional (log *log*)
+                      &aux (log-sym (gensym "log")))
+  "*Arguments and Values:*
+
+   _message_—an _object_.
+
+   _log_—an _agent_ or {nil}. Default is the _value_ of {*log*}.
+
+   *Description*:
+
+   If _log_ is a _non-nil object_, {write-log*} tags _message_ with the
+   _calling agent_ and a _timestamp_ and sends it to _log_.
+
+   {write-log*} has no effect if _log_ is {nil}."
+  `(let ((,log-sym ,log))
+     (when ,log-sym
+       (write-log ,message ,log-sym))))
