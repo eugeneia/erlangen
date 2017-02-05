@@ -8,5 +8,6 @@
   :components ((:file "supervisor")
                (:file "logger")
                (:file "server")
-               (:file "timer"))
+               (:file "timer")
+               (:file "socket-server" :depends-on ("supervisor")))
   :depends-on ("erlangen" "trivia"))
