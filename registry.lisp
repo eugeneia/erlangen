@@ -6,12 +6,14 @@
 
 (defvar *registry*/lock (make-read-write-lock))
 
-(defun register (name &optional (agent (agent)))
+(defun register (name &key (agent (agent)) (supersede nil))
   "*Arguments and Values:*
 
    _name_—a _keyword_.
 
    _agent_—an _agent_. Default is the _calling agent_.
+
+   _supersede_—a _generalized boolean_. Default is _false_.
 
    *Description*:
 
@@ -19,12 +21,12 @@
 
    *Exceptional Situations:*
 
-   If _name_ is already associated with an _agent_ an _error_ of _type_
-   {simple-error} is signaled."
+   If _name_ is already associated with an _agent_ and _supersede_ is _false_
+   an _error_ of _type_ {simple-error} is signaled."
   (check-type name keyword)
   (check-type agent agent)
   (with-write-lock (*registry*/lock)
-    (if #1=(gethash name *registry*)
+    (if (and (not supersede) #1=(gethash name *registry*))
         (error "~a is already registered." name)
         (setf #1# agent))))
 
