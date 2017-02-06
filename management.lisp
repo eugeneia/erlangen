@@ -20,7 +20,7 @@
 
     *Arguments and Values:*
 
-    _agent-tree_—an _object_ of _type_ {agent-tree}.
+    _agent-tree_—an _object_ of _type_ {agent-tree} or {agent}.
 
     _list_—a _list_ of _agents_.
 
@@ -35,7 +35,7 @@
 
     *Arguments and Values:*
 
-    _agent-tree_—an _object_ of _type_ {agent-tree}.
+    _agent-tree_—an _object_ of _type_ {agent-tree} or {agent}.
 
     _subtrees_—a _list_ of _objects_ of _type_ {agent-tree}.
 
@@ -95,6 +95,12 @@
                 root linked)
         (let ((#1# (+ #1# 4)))
           (loop for m in monitored do (print-object m stream))))))
+
+(defmethod linked ((agent agent))
+  (linked (agent-tree agent)))
+
+(defmethod monitored ((agent agent))
+  (monitored (agent-tree agent)))
 
 (defun process-agent (process &key (timeout 1))
   "→ _agent_
