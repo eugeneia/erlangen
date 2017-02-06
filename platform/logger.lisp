@@ -32,22 +32,17 @@
      {to-standard-output} prints _message_ to {*standard-output*}"
     (pprint message standard-output)))
 
-(defun logger (&key (name :log) (log-function 'to-standard-output))
+(defun logger (&key (log-function 'to-standard-output))
   "*Arguments and Values:*
-
-   _name_—a _keyword_. Default is {:log}.
 
    _log-function_—a unary _function designator_. Default is
    {to-standard-output}.
 
    *Description*:
 
-   {logger} registers itself for _name_, and calls _log-function_ on messages
-   it receives."
-  (register name)
-  (unwind-protect (loop for message = (receive)
-                     do (ignore-errors (funcall log-function message)))
-    (unregister name)))
+   {logger} calls _log-function_ on messages it receives."
+  (loop for message = (receive) do
+       (ignore-errors (funcall log-function message))))
 
 (defun make-timestamp (&optional (universal-time (get-universal-time)))
   "*Arguments and Values:*
