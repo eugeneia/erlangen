@@ -46,8 +46,8 @@
 
 (defclass agent-tree ()
   ((root :initarg :root :reader root)
-   (linked :initarg :linked :reader linked-to)
-   (monitored :initarg :monitored :reader monitored-by))
+   (linked :initarg :linked :reader linked)
+   (monitored :initarg :monitored :reader monitored))
   (:documentation
    "*Description:*
 
