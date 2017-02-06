@@ -44,12 +44,18 @@
     (:permanent t)
     (:transient (eq status :exit))))
 
-(defvar *maximum-intensity*) (defvar *restarts*) (defvar *start*)
+(defvar *maximum-intensity*) (defvar *restarts*) (defvar *period*)
+
+(defun add-restart (restart restarts now period)
+  (when (>= restart (- now period))
+    (cons restart
+          (when restarts
+            (add-restart (car restarts) (cdr restarts) now period)))))
 
 (defun check-restart-intensity ()
-  (incf *restarts*)
-  (let ((runtime (- (get-universal-time) *start*)))
-    (unless (and (> runtime 0) (< (/ *restarts* runtime) *maximum-intensity*))
+  (let ((now (get-internal-real-time)))
+    (setf *restarts* (add-restart now *restarts* now *period*))
+    (unless (<= (length *restarts*) *maximum-intensity*)
       (error "Children are being restarted too often."))))
 
 (defun supervisor (childspecs &key (strategy 'one-for-one)
@@ -59,9 +65,9 @@
   "DOCUMENT ME! I AM PUBLIC!"
   (check-type intensity (integer 0))
   (check-type period (integer 1))
-  (let* ((*maximum-intensity* (/ intensity period))
-         (*restarts* 0)
-         (*start* (get-universal-time))
+  (let* ((*maximum-intensity* intensity)
+         (*period* (* period internal-time-units-per-second))
+         (*restarts* ())
          (*log* log)
          (children (loop for childspec in childspecs collect
                         (start-child (make-child childspec)))))
