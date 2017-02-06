@@ -82,7 +82,7 @@
    and sends it to _log_."
   (send (list* (agent) (make-timestamp) message) log))
 
-(defmacro write-log* (message &optional (log *log*)
+(defmacro write-log* (message &optional (log '*log*)
                       &aux (log-sym (gensym "log")))
   "*Arguments and Values:*
 
