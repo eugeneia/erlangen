@@ -10,10 +10,11 @@
 (in-package :erlangen-platform.supervisor)
 
 (defstruct (child (:constructor make-child%))
-  id function restart spawn-args agent)
+  id function restart spawn-args agent register-p)
 
 (defun make-child (childspec)
-  (destructuring-bind (id function &key (restart :permanent) spawn-args)
+  (destructuring-bind (id function
+                          &key spawn-args register-p (restart :permanent))
       childspec
     (check-type id keyword)
     (check-type function (or function (and symbol (satisfies fboundp)) call))
@@ -21,13 +22,16 @@
     (check-type spawn-args list)
     (make-child% :id id
                  :function function
-                 :restart restart
-                 :spawn-args spawn-args)))
+                 :spawn-args spawn-args
+                 :register-p (not (null register-p))
+                 :restart restart)))
 
 (defun start-child (child)
-  (with-slots (id function spawn-args agent) child
+  (with-slots (id function spawn-args register-p agent) child
     (write-log* `(,id :start))
-    (setf agent (apply 'spawn function :attach :monitor spawn-args)))
+    (setf agent (apply 'spawn function :attach :monitor spawn-args))
+    (when register-p
+      (register id :agent agent :supersede t)))
   child)
 
 (defun stop-child (child reason)
