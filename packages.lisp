@@ -203,6 +203,7 @@ introspection, and retrieval of statistics for agents and remote connections.")
         :ccl
         :erlangen.agent
         :erlangen.mailbox
+        :erlangen.registry
         :erlangen.distribution.protocol.node)
   (:export :agent-stats
            :agent-tree

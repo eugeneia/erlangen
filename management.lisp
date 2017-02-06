@@ -69,6 +69,8 @@
    {agent-tree} returns the current _agent-tree_ whose root is _agent_."
   (let (linked monitored)
     (typecase agent
+      (keyword ; lookup registered agents
+       (return-from agent-tree (agent-tree (agent-by-name agent))))
       (erlangen.agent:agent ; stop at local edges
        (loop for x in (agent-links agent)
           if (and ; remote agents show up as links
