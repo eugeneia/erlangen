@@ -80,7 +80,7 @@
 
    {write-log} tags _message_ with the _calling agent_ and a _timestamp_
    and sends it to _log_."
-  (send (list* (agent) (make-timestamp) message) log))
+  (send (list* (make-timestamp) (agent) message) log))
 
 (defmacro write-log* (message &optional (log '*log*)
                       &aux (log-sym (gensym "log")))
