@@ -132,5 +132,5 @@
    dequeued message is printed to _stream_."
   (ignore-errors
     (loop for message = (erlangen:receive :timeout 0)
-       when print-p do (print message stream)))
+       when print-p do (pprint message stream)))
   (values))

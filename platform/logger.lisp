@@ -30,7 +30,7 @@
      *Description*:
 
      {to-standard-output} prints _message_ to {*standard-output*}"
-    (print message standard-output)))
+    (pprint message standard-output)))
 
 (defun logger (&key (name :log) (log-function 'to-standard-output))
   "*Arguments and Values:*
