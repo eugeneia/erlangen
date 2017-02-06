@@ -64,11 +64,11 @@
     (loop for notice = (receive) do
          (destructuring-bind (agent status &rest values) notice
            (let ((child (find agent children :key 'child-agent)))
-             (check-type child child)
-             (write-log* (list* (child-id child) status values))
-             (when (restartable-p child status)
-               (check-restart-intensity)
-               (funcall strategy children child notice)))))))
+             (when child
+               (write-log* (list* (child-id child) status values))
+               (when (restartable-p child status)
+                 (check-restart-intensity)
+                 (funcall strategy children child notice))))))))
 
 (defun one-for-one (children failed notice)
   (declare (ignore children notice))
