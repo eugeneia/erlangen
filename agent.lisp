@@ -35,7 +35,7 @@
 
 (defmethod print-object ((o agent) stream)
   (if (agent-symbol o)
-      (print-unreadable-object (o stream :type nil :identity t)
+      (print-unreadable-object (o stream :type t :identity t)
         (let ((*package* (find-package :keyword)))
           (prin1 (agent-symbol o) stream)))
       (print-unreadable-object (o stream :type t :identity t))))
