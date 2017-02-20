@@ -7,7 +7,8 @@
            :write-log
            :write-log*
            :make-timestamp
-           :to-standard-output))
+           :to-text
+           :*text-output*))
 
 (in-package :erlangen-platform.log)
 
@@ -21,22 +22,31 @@
    This _variable_ can be _bound_ or _assigned_ in order to change the default
    destination for log entries written by {write-log}.")
 
-(let ((standard-output *standard-output*))
-  (defun to-standard-output (message)
-    "*Arguments and Values:*
+(defparameter *text-output* *standard-output*
+  "*Value Type:*
 
-     _message_—an _object_.
+   a _character output stream_.
 
-     *Description*:
+   *Description:*
 
-     {to-standard-output} prints _message_ to {*standard-output*}"
-    (pprint message standard-output)))
+   This _variable_ can be _bound_ or _assigned_ in order to change the default
+   destination for log entries printed by {to-text}. Its initial value is the
+   value of {*standard-output*} at load time.")
 
-(defun logger (&key (log-function 'to-standard-output))
+(defun to-text (message)
   "*Arguments and Values:*
 
-   _log-function_—a unary _function designator_. Default is
-   {to-standard-output}.
+   _message_—an _object_.
+
+   *Description*:
+
+   {to-text} prints _message_ to {*text-output*}"
+  (pprint message *text-output*))
+
+(defun logger (&key (log-function 'to-text))
+  "*Arguments and Values:*
+
+   _log-function_—a unary _function designator_. Default is {to-text}.
 
    *Description*:
 
@@ -57,7 +67,7 @@
 
    _YYYY-MM-DD hh:mm:ss_"
   (multiple-value-bind (second minute hour date month year
-                               ; We don't care.
+                               ;; We don't care.
                                day daylight-p zone)
       (decode-universal-time universal-time 0)
     (declare (ignore day daylight-p zone))
