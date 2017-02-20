@@ -28,8 +28,8 @@
 
 (defun start-child (child)
   (with-slots (id function spawn-args register-p agent) child
-    (write-log* `(,id :start))
     (setf agent (apply 'spawn function :attach :monitor spawn-args))
+    (write-log* `(,id :start ,agent))
     (when register-p
       (register id :agent agent :supersede t)))
   child)
