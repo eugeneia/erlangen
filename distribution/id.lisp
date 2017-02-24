@@ -11,28 +11,29 @@ not contain #\/)."
   "Type for host, node and agent names."
   '(and string (satisfies valid-name-p)))
 
+(defvar *host-name* (machine-instance))
+
 (defun host-name ()
-  "Returns hostname."
-  (machine-instance))
+  *host-name*)
+
+(defun set-host-name (name)
+  (check-type name name)
+  (setf *host-name* name))
+
+(defsetf host-name set-host-name)
 
 (defun gen-node-name ()
   "Returns node name generated from Unix pid."
   (format nil "node-~a" (ccl::getpid)))
 
-(defvar *node-name*/lock (make-read-write-lock))
-(defvar *node-name* (gen-node-name)
-  "Node name.")
+(defvar *node-name* (gen-node-name))
 
 (defun node-name ()
-  "Returns the name (a string) of this node."
-  (with-read-lock (*node-name*/lock)
-    *node-name*))
+  *node-name*)
 
 (defun set-node-name (name)
-  "Sets the node name to NAME."
   (check-type name name)
-  (with-write-lock (*node-name*/lock)
-    (setf *node-name* name)))
+  (setf *node-name* name))
 
 (defsetf node-name set-node-name)
 
