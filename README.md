@@ -10,31 +10,17 @@ changes._
  * [Manual and API Documentation](http://mr.gy/software/erlangen/api.html)
  * [Erlangen: introduction](http://mr.gy/blog/erlangen-intro.html)
 
-## Dependencies
-
- * [trivia](https://github.com/guicho271828/trivia)
- * [jpl-queues](http://www.thoughtcrime.us/software/jpl-queues/)
- * [fast-io](https://github.com/rpav/fast-io)
- * [cl-conspack](https://github.com/conspack/cl-conspack)
- * [trivial-utf-8](https://common-lisp.net/project/trivial-utf-8/)
- * [split-sequence](https://github.com/sharplispers/split-sequence)
-
 ## Getting Started
 
-First, make sure you have [Clozure Common Lisp](http://ccl.clozure.com/)
-installed. Then clone the Erlangen repository to a place where
-[ASDF](https://common-lisp.net/project/asdf/) can find it. Also, make sure ASDF
-can find Erlangen’s dependencies.
-
-If you use [Quicklisp](https://www.quicklisp.org/) you can place Erlangen into
-the `quicklisp/local-projects` directory and have it fetch the dependencies
-automatically.
+First, make sure you have [Clozure Common Lisp](http://ccl.clozure.com/) and
+[Quicklisp](https://www.quicklisp.org/) installed (if you use a Debian based OS
+you can install CCL via this [package](http://mr.gy/blog/clozure-cl-deb.html)).
+Next clone Erlangen into `quicklisp/local-projects`.
 
 You can now start Clozure Common Lisp and load Erlangen:
 
 ```
-(require :asdf) ; Not necessary if you use Quicklisp
-(asdf:load-system :erlangen)
+(ql:quickload :erlangen)
 (use-package :erlangen)
 ```
 
