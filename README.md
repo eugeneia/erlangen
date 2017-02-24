@@ -153,7 +153,7 @@ For the following example to work your hostname as reported by
 `/etc/hosts` file and add a line like this one (your mileage may vary):
 
 ```
-127.0.0.1 <hostname>
+127.0.1.1 <hostname>
 ```
 
 With that out of the way, we can also make our initial Erlangen instance a

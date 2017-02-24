@@ -28,7 +28,7 @@
 
    _reason_—an _object_.
 
-   _agent_—an _agent_. Default is the _calling agent_.
+   _agent_—an _agent_. The default is the _calling agent_.
 
    *Description*:
 
@@ -175,11 +175,11 @@ for ERLANGEN.AGENT."
     (string (erlangen.agent:unlink agent)
             (remote-unlink agent (agent-id (agent))))))
 
-(defun node (&key (host "localhost") name)
+(defun node (&key host name)
   "*Arguments and Values:*
 
    _host_—a _host_ as accepted by [resolve-address](http://ccl.clozure.com/docs/ccl.html#f_resolve-address).
-   The default is {\"localhost\"}.
+   The default is the local host name as reported by {machine-instance}.
 
    _name_—a _string_. The default is a unique name.
 
@@ -203,15 +203,18 @@ for ERLANGEN.AGENT."
    registered by another node, or because the port mapper is unreachable)
    an _error_ of _type_ {error} is signaled, and the node protocol server
    is killed."
+  (when host
+    (setf (host-name) host))
   (when name
     (setf (node-name) name))
   (handler-case (query-node-port "localhost" name)
-    (error (error) (declare (ignore error)))
+    (error (error)
+      (declare (ignore error)))
     (:no-error (port)
       (error "Node “~a” is already registered to port: ~a" name port)))
   (register :node)
   (unwind-protect (multiple-value-bind (node-server port)
-                      (make-node-server :host host)
+                      (make-node-server :host (host-name))
                     (spawn node-server :attach :link)
                     (repeat-rate (lambda ()
                                    (ignore-errors
