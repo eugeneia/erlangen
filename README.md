@@ -10,31 +10,17 @@ changes._
  * [Manual and API Documentation](http://mr.gy/software/erlangen/api.html)
  * [Erlangen: introduction](http://mr.gy/blog/erlangen-intro.html)
 
-## Dependencies
-
- * [trivia](https://github.com/guicho271828/trivia)
- * [jpl-queues](http://www.thoughtcrime.us/software/jpl-queues/)
- * [fast-io](https://github.com/rpav/fast-io)
- * [cl-conspack](https://github.com/conspack/cl-conspack)
- * [trivial-utf-8](https://common-lisp.net/project/trivial-utf-8/)
- * [split-sequence](https://github.com/sharplispers/split-sequence)
-
 ## Getting Started
 
-First, make sure you have [Clozure Common Lisp](http://ccl.clozure.com/)
-installed. Then clone the Erlangen repository to a place where
-[ASDF](https://common-lisp.net/project/asdf/) can find it. Also, make sure ASDF
-can find Erlangen’s dependencies.
-
-If you use [Quicklisp](https://www.quicklisp.org/) you can place Erlangen into
-the `quicklisp/local-projects` directory and have it fetch the dependencies
-automatically.
+First, make sure you have [Clozure Common Lisp](http://ccl.clozure.com/) and
+[Quicklisp](https://www.quicklisp.org/) installed (if you use a Debian based OS
+you can install CCL via this [package](http://mr.gy/blog/clozure-cl-deb.html)).
+Next clone Erlangen into `quicklisp/local-projects`.
 
 You can now start Clozure Common Lisp and load Erlangen:
 
 ```
-(require :asdf) ; Not necessary if you use Quicklisp
-(asdf:load-system :erlangen)
+(ql:quickload :erlangen)
 (use-package :erlangen)
 ```
 
@@ -151,35 +137,27 @@ bin/erlangen-port-mapper localhost &
 ```
 
 in a shell in the root of the Erlangen repository. Now build the Erlangen
-kernel in the same way to help quickly start additional Erlangen instances, and
+kernel in the same way to conveniently run additional Erlangen instances, and
 use it to start a node named *map-node*.
 
 ```
 make bin/erlangen-kernel
-bin/erlangen-kernel -n -e '(node :name "map-node")'
+bin/erlangen-kernel -n -e '(node :host "localhost" :name "map-node")'
 ```
 
-Hint: if you use Emacs, you can start a new Erlangen instance with Slime with
+Hint: if you use Emacs, you can start a new Erlangen instance with Slime via
 `C-u M-x slime RET /path/to/erlangen-kernel`.
 
-For the following example to work your hostname as reported by
-`machine-instance` must resolve to the local host. You might need to edit your
-`/etc/hosts` file and add a line like this one (your mileage may vary):
+Finally, we can also make our initial Erlangen instance a node, and offload
+some work to *map-node*:
 
 ```
-127.0.0.1 <hostname>
-```
-
-With that out of the way, we can also make our initial Erlangen instance a
-node, and offload some work to *map-node*:
-
-```
-(spawn 'node)
+(spawn '(node :host "localhost"))
 (spawn '(erlangen.examples:parallel-map 1+ #(2 4 6 8 10 12 14))
        :attach :monitor
        :node "map-node")
 (receive)
-→ ("perth/map-node/0" :OK #(3 5 7 9 11 13 15))
+→ ("localhost/map-node/0" :OK #(3 5 7 9 11 13 15))
 ```
 
 What happened? We spawned an agent on the remote *map-node* instance to run

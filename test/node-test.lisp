@@ -24,7 +24,7 @@
            (setq port-mapper (spawn `(port-mapper)))
            (sleep 1)
            (multiple-value-bind (node-server port)
-               (make-node-server)
+               (make-node-server :host (host-name))
              (setq node-server-agent (spawn node-server))
              (setq register-agent
                    (spawn `(register-node ,(node-name) ,port))))
