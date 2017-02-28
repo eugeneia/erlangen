@@ -67,7 +67,7 @@ for ERLANGEN.AGENT."
    _node_—a _node name_ or {nil}. The default is {nil}.
 
    _host_—a _host_ as accepted by [resolve-address](http://ccl.clozure.com/docs/ccl.html#f_resolve-address).
-   The default is the local host name as reported by {machine-instance}.
+   The default is the host name of the local node.
 
    *Description:*
 
@@ -79,6 +79,10 @@ for ERLANGEN.AGENT."
 
    If _node_ is _non-nil_ the _agent_ is started on _node_ of _host_ instead of
    the local node.
+
+   *Affected By:*
+
+   {node}
 
    *Exceptional Situations:*
 
@@ -196,6 +200,11 @@ for ERLANGEN.AGENT."
    ;; Start talking to remote nodes:
    (spawn 'node)
    #
+
+   *Side Effects:*
+
+   {node} changes the host name of the local node to _host_, which is
+   subsequently used as a default argument to {spawn}.
 
    *Exceptional Situations:*
 
