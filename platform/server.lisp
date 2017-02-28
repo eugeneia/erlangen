@@ -1,5 +1,6 @@
 (defpackage erlangen-platform.server
   (:use :cl :erlangen :trivia)
+  (:shadow :call)
   (:export :server
            :cast
            :call
