@@ -2,6 +2,8 @@
 
 (in-package :ccl)
 
+(set-development-environment)
+
 (defun try-semaphore (s &optional flag)
   "Decrement semaphore S if possible. Returns T if S was decremented and NIL
 otherwise."
@@ -15,3 +17,10 @@ otherwise."
             (socket-error-situation o)
             (or (socket-error-identifier o)
                 (socket-error-code o)))))
+
+(defun get-internal-real-time ()
+  (nth-value 0 (floor (current-time-in-nanoseconds)
+                      (load-time-value
+                       (/ 1000000000 internal-time-units-per-second)))))
+
+(set-user-environment)
