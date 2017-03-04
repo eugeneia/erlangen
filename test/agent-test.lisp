@@ -87,9 +87,11 @@
                seconds))
         (exit :kill incrementer)))))
 
-(defun basic-message-benchmark (&key (n-messages 1e6)
+(defun basic-message-benchmark (&key (n-messages 1000000)
                                      (n-pairs 1)
                                      (timeout 60))
+  (check-type n-messages (integer 1))
+  (check-type n-pairs (integer 1))
   (with-pseudo-agent (p)
     (loop repeat n-pairs do
          (spawn (ping-pong-bench n-messages timeout) :attach :monitor))
