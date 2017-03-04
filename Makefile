@@ -18,6 +18,10 @@ bin/erlangen-message-benchmark: build/message-benchmark.lisp \
 	ccl -Q -b -n \
 		-l build/load-quicklisp.lisp \
 		-l build/message-benchmark.lisp
+bin/erlangen-ring-benchmark: build/ring-benchmark.lisp $(SOURCE_OBJECTS) | bin
+	ccl -Q -b -n \
+		-l build/load-quicklisp.lisp \
+		-l build/ring-benchmark.lisp
 test-agent: bin/erlangen-kernel
 	bin/erlangen-kernel -Q -b -n \
 	-e "(erlangen.agent-test:run-tests)" \

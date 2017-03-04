@@ -63,6 +63,8 @@
                ;; Tests
                (:file "test/agent-test"
                       :depends-on ("agent"))
+               (:file "test/ring-benchmark"
+                      :depends-on ("erlangen"))
                (:file "test/port-mapper-test"
                       :depends-on ("distribution/protocol/port-mapper"
                                    "erlangen"))
