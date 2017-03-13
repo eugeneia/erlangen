@@ -42,9 +42,12 @@
   (setf #1=(bucket-routes bucket) (delete route #1#))
   (incf (bucket-free bucket)))
 
-(defun route-stale-p (route)
+(defun route-stale-p (route &optional (timeout *timeout*))
   (> (- (get-internal-real-time) (route-ctime route))
-     *timeout*))
+     timeout))
+
+(defun route-dead-p (route)
+  (route-stale-p route (* *timeout* 4)))
 
 (defun bucket-delete-stale (bucket)
   (let ((stale-route (find-if 'route-stale-p (bucket-routes bucket))))
@@ -76,18 +79,14 @@
                      (route-ctime route) (get-internal-real-time))))
            (bucket-routes (find-bucket id node))))
 
-(defun find-routes (key node)
-  (reduce (lambda (closest route &aux (previous (first closest)))
-            (if (or (null closest)
-                    (< (distance (route-id route) key)
-                       (distance (route-id previous) key)))
-                (list route) closest))
-          (bucket-routes (find-bucket key node))
-          :initial-value nil))
-
-(defun refresh-bucket-p (bucket)
-  (or (plusp (bucket-free bucket))
-      (find-if 'route-stale-p (bucket-routes bucket))))
+(defun find-routes (key node n &optional from)
+  (last (sort (remove from (loop for bucket in (node-buckets node)
+                              append (bucket-routes bucket))
+                      :key 'route-id)
+              (lambda (x y)
+                (> (distance (route-id x) key)
+                   (distance (route-id y) key))))
+        n))
 
 (defstruct ring
   (sequence 0) buffer)
@@ -184,28 +183,24 @@
 (defmethod values-delete ((values hash-table) key)
   (remhash key values))
 
-(defun routes (from to)
+(defun routes (from to &optional (n 1))
   (remove-if (lambda (route)
-               (or (<= (distance (node-id *node*) to)
-                       (distance (route-id route) to))
-                   (eql (route-id route) from)))
-             (find-routes to *node*)))
+               (<= (distance (node-id *node*) to)
+                   (distance (route-id route) to)))
+             (find-routes to *node* n from)))
 
-(defun neighbors ()
-  (let ((n *replication*))
-    (loop for bucket in (node-buckets *node*) while (plusp n) append
-         (loop for route in (bucket-routes bucket) while (plusp n)
-            do (decf n) collect route))))
+(defun neighbors (key)
+  (find-routes key *node* *replication*))
 
 (defun discover (key &optional announce-p)
   (forward (make-discover-request :id (and announce-p (node-id *node*))
                                   :key key)
-           (find-routes key *node*)))
+           (neighbors key)))
 
 (defmethod handle ((request discover-request))
   (with-slots (id key) request
     (respond (make-discover-reply) request)
-    (forward request (routes id key))))
+    (forward request (routes id key *replication*))))
 
 (defmethod handle ((request get-request))
   (with-slots (id key forward-p) request
@@ -221,7 +216,7 @@
                                         (values-put #1# key value)
                                         (respond #2# request))
                                       (finalize-request reply)))
-                        (neighbors))))))))
+                        (neighbors key))))))))
 
 (defmethod handle ((request put-request))
   (with-slots (id key value forward-p) request
@@ -229,7 +224,8 @@
       (values-put (node-values *node*) key value)
       (respond (make-put-reply) request)
       (when forward-p
-        (forward (replicate-request request :forward-p nil) (neighbors))))))
+        (forward (replicate-request request :forward-p nil)
+                 (neighbors key))))))
 
 (defmethod handle ((request delete-request))
   (with-slots (id key forward-p) request
@@ -237,7 +233,8 @@
       (values-delete (node-values *node*) key)
       (respond (make-delete-reply) request)
       (when forward-p
-        (forward (replicate-request request :forward-p nil) (neighbors))))))
+        (forward (replicate-request request :forward-p nil)
+                 (neighbors key))))))
 
 (defun gen-id (&optional (start 0) (end (expt 2 *key-size*)))
   (+ start (random (- end start))))
@@ -247,19 +244,33 @@
           (expt 2 (bucket-bound bucket))))
 
 (defun refresh-routes (&optional announce-p)
-  (loop for bucket in (node-buckets *node*) when (refresh-bucket-p bucket)
-     do (discover (random-bucket-id bucket) announce-p)))
+  (discover (node-id *node*) announce-p)
+  (dolist (bucket (node-buckets *node*))
+    (let ((stale-routes (remove-if-not 'route-stale-p (bucket-routes bucket))))
+      (when (or (plusp (bucket-free bucket)) stale-routes)
+        (discover (random-bucket-id bucket) announce-p))
+      (dolist (stale-route stale-routes)
+        (discover (route-id stale-route) announce-p)
+        (when (route-dead-p stale-route)
+          (bucket-delete bucket stale-route))))))
 
 (defun initialize-node (routes &optional announce-p)
   (dolist (route routes)
     (add-route *node* route))
-  (discover (node-id *node*) announce-p))
+  (refresh-routes announce-p))
 
-(defun refresh-interval ()
-  (/ *timeout* internal-time-units-per-second 3))
+(defun deadline (timeout)
+  (+ (get-internal-real-time) timeout))
 
-(defun receive-message ()
-  (handler-case (receive :timeout (refresh-interval))
+(defun deadline-exceeded-p (deadline)
+  (>= (get-internal-real-time) deadline))
+
+(defun seconds-until-deadline (deadline)
+  (/ (max (- deadline (get-internal-real-time)) 0)
+     internal-time-units-per-second))
+
+(defun receive-message (deadline)
+  (handler-case (receive :timeout (seconds-until-deadline deadline))
     (:no-error (message)
       (when (message-id message)
         (intern-route message))
@@ -269,27 +280,33 @@
 
 (defun node (&key (id (gen-id)) routes (values (make-hash-table)))
   (let ((*node* (make-node :id id :values values))
-        (*random-state* (make-random-state t)))
+        (*random-state* (make-random-state t))
+        (refresh-deadline #1=(deadline *timeout*)))
     (initialize-node routes :announce)
-    (loop for message = (receive-message) do
-         (etypecase message
+    (loop for message = (receive-message refresh-deadline) do
+         (typecase message
            (request (handle message))
-           (reply   (accept message))
-           (null    (refresh-routes :announce))))))
+           (reply   (accept message)))
+         (when (deadline-exceeded-p refresh-deadline)
+           (refresh-routes :announce)
+           (setf refresh-deadline #1#)))))
 
 (defun proxy (request)
   (forward (reply-bind (replicate-request request :id nil)
                        (lambda (reply)
                          (finalize-request reply)
                          (respond reply request)))
-           (find-routes (slot-value request 'key) *node*)))
+           (neighbors (slot-value request 'key))))
 
 (defun client (&key routes)
   (let ((*node* (make-node :id (gen-id)))
-        (*random-state* (make-random-state t)))
+        (*random-state* (make-random-state t))
+        (refresh-deadline #1=(deadline *timeout*)))
     (initialize-node routes)
-    (loop for message = (receive-message) do
-         (etypecase message
+    (loop for message = (receive-message refresh-deadline) do
+         (typecase message
            (request (proxy message))
-           (reply   (accept message))
-           (null    (refresh-routes))))))
+           (reply   (accept message)))
+         (when (deadline-exceeded-p refresh-deadline)
+           (refresh-routes)
+           (setf refresh-deadline #1#)))))
