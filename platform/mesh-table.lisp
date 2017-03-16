@@ -2,7 +2,7 @@
   (:use :cl :ccl :erlangen :erlangen-platform.log)
   (:shadow :node)
   (:export :*key-size* :*replication* :*timeout* :*response-backlog*
-           :node :client :gen-id :route
+           :node :client :gen-id :route :route-agent
            :make-get-request :make-put-request :make-delete-request
            :get-reply-value :reply-sequence))
 
@@ -42,12 +42,9 @@
   (setf #1=(bucket-routes bucket) (delete route #1#))
   (incf (bucket-free bucket)))
 
-(defun route-stale-p (route &optional (timeout *timeout*))
+(defun route-stale-p (route)
   (> (- (get-internal-real-time) (route-ctime route))
-     timeout))
-
-(defun route-dead-p (route)
-  (route-stale-p route (* *timeout* 4)))
+     *timeout*))
 
 (defun bucket-delete-stale (bucket)
   (let ((stale-route (find-if 'route-stale-p (bucket-routes bucket))))
@@ -79,14 +76,14 @@
                      (route-ctime route) (get-internal-real-time))))
            (bucket-routes (find-bucket id node))))
 
-(defun find-routes (key node n &optional from)
-  (last (sort (remove from (loop for bucket in (node-buckets node)
-                              append (bucket-routes bucket))
-                      :key 'route-id)
-              (lambda (x y)
-                (> (distance (route-id x) key)
-                   (distance (route-id y) key))))
-        n))
+(defun find-routes (key node &optional stale-p)
+  (sort (if stale-p
+            #1=(loop for bucket in (node-buckets node)
+                  append (bucket-routes bucket))
+            (delete-if 'route-stale-p #1#))
+        (lambda (x y)
+          (> (distance x key) (distance y key)))
+        :key 'route-id))
 
 (defstruct ring
   (sequence 0) buffer)
@@ -183,19 +180,22 @@
 (defmethod values-delete ((values hash-table) key)
   (remhash key values))
 
-(defun routes (from to &optional (n 1))
+(defun routes (from to &optional (max-routes 1))
   (remove-if (lambda (route)
                (<= (distance (node-id *node*) to)
                    (distance (route-id route) to)))
-             (find-routes to *node* n from)))
+             (last (delete from (find-routes to *node*) :key 'route-id)
+                   max-routes)))
 
-(defun neighbors (key)
-  (find-routes key *node* *replication*))
+(defun neighbors (key &optional stale-p)
+  (last (find-routes key *node* stale-p)
+        *replication*))
 
 (defun discover (key &optional announce-p)
-  (forward (make-discover-request :id (and announce-p (node-id *node*))
-                                  :key key)
-           (neighbors key)))
+  (forward (if announce-p
+               (make-discover-request :key key)
+               (make-discover-request :key key :id nil))
+           (neighbors key :include-stale)))
 
 (defmethod handle ((request discover-request))
   (with-slots (id key) request
@@ -244,20 +244,15 @@
           (expt 2 (bucket-bound bucket))))
 
 (defun refresh-routes (&optional announce-p)
-  (discover (node-id *node*) announce-p)
   (dolist (bucket (node-buckets *node*))
-    (let ((stale-routes (remove-if-not 'route-stale-p (bucket-routes bucket))))
-      (when (or (plusp (bucket-free bucket)) stale-routes)
-        (discover (random-bucket-id bucket) announce-p))
-      (dolist (stale-route stale-routes)
-        (discover (route-id stale-route) announce-p)
-        (when (route-dead-p stale-route)
-          (bucket-delete bucket stale-route))))))
+    (when (or (plusp (bucket-free bucket))
+              (find-if 'route-stale-p (bucket-routes bucket)))
+      (discover (random-bucket-id bucket) announce-p))))
 
 (defun initialize-node (routes &optional announce-p)
   (dolist (route routes)
     (add-route *node* route))
-  (refresh-routes announce-p))
+  (discover (node-id *node*) announce-p))
 
 (defun deadline (timeout)
   (+ (get-internal-real-time) timeout))
