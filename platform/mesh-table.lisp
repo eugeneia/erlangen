@@ -220,7 +220,7 @@
 
 (defmethod handle ((request put-request))
   (with-slots (id key value forward-p) request
-    (unless (forward request (routes id key))
+    (unless (and forward-p (forward request (routes id key)))
       (values-put (node-values *node*) key value)
       (respond (make-put-reply) request)
       (when forward-p
@@ -229,7 +229,7 @@
 
 (defmethod handle ((request delete-request))
   (with-slots (id key forward-p) request
-    (unless (forward request (routes id key))
+    (unless (and forward-p (forward request (routes id key)))
       (values-delete (node-values *node*) key)
       (respond (make-delete-reply) request)
       (when forward-p
@@ -291,7 +291,7 @@
                        (lambda (reply)
                          (finalize-request reply)
                          (respond reply request)))
-           (neighbors (slot-value request 'key))))
+           (routes nil (slot-value request 'key))))
 
 (defun client (&key routes)
   (let ((*node* (make-node :id (gen-id)))
