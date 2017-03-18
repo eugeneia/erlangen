@@ -76,14 +76,11 @@
                      (route-ctime route) (get-internal-real-time))))
            (bucket-routes (find-bucket id node))))
 
-(defun find-routes (key node &optional stale-p)
-  (sort (if stale-p
-            #1=(loop for bucket in (node-buckets node)
-                  append (bucket-routes bucket))
-            (delete-if 'route-stale-p #1#))
-        (lambda (x y)
-          (> (distance x key) (distance y key)))
-        :key 'route-id))
+(defun find-routes (key node)
+  (sort (loop for bucket in (node-buckets node)
+           append (bucket-routes bucket))
+        '> :key (lambda (route)
+                  (distance (route-id route) key))))
 
 (defstruct ring
   (sequence 0) buffer)
@@ -181,14 +178,18 @@
   (remhash key values))
 
 (defun routes (from to &optional (max-routes 1))
-  (remove-if (lambda (route)
-               (<= (distance (node-id *node*) to)
-                   (distance (route-id route) to)))
-             (last (delete from (find-routes to *node*) :key 'route-id)
-                   max-routes)))
+  (let ((own-distance (distance (node-id *node*) to)))
+    (last (delete-if (lambda (route)
+                       (or (= (route-id route) from)
+                           (route-stale-p route)
+                           (<= own-distance (distance (route-id route) to))))
+                     (find-routes to *node*))
+          max-routes)))
 
-(defun neighbors (key &optional stale-p)
-  (last (find-routes key *node* stale-p)
+(defun neighbors (key &optional include-stale-p)
+  (last (if include-stale-p
+            #1=(find-routes key *node*)
+            (delete-if 'route-stale-p #1#))
         *replication*))
 
 (defun discover (key &optional announce-p)
