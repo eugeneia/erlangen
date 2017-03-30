@@ -36,26 +36,11 @@
       (setf (svref buffer i) (make-cell :sequence i)))
     (make-bounded-queue% :buffer buffer :mask (1- size))))
 
-(declaim (inline m+ f- f&))
-
-(defun m+ (x y)
-  (declare (type fixnum x y))
-  (the fixnum (logand most-positive-fixnum (+ x y))))
-
-(defun f- (x y)
-  (declare (type fixnum x y))
-  (- x y))
-
-(defun f& (x y)
-  (declare (type fixnum x y))
-  (the fixnum (logand x y)))
-
 (defun bounded-queue-push (queue value)
   (loop do (let* ((write (bounded-queue-write queue))
-                  (next-write (m+ write 1))
-                  (cell (svref (bounded-queue-buffer queue)
-                               (f& write (bounded-queue-mask queue))))
-                  (diff (f- (cell-sequence cell) write)))
+                  (next-write (logand (1+ write) (bounded-queue-mask queue)))
+                  (cell (svref (bounded-queue-buffer queue) write))
+                  (diff (- (cell-sequence cell) write)))
              (cond ((= diff 0)
                     (when (cas (bounded-queue-write queue) write next-write)
                       (setf (cell-value cell) value
@@ -66,14 +51,12 @@
 
 (defun bounded-queue-pop (queue)
   (loop do (let* ((read (bounded-queue-read queue))
-                  (next-read (m+ read 1))
-                  (cell (svref (bounded-queue-buffer queue)
-                               (f& read (bounded-queue-mask queue))))
-                  (diff (f- (cell-sequence cell) next-read)))
+                  (next-read (logand (1+ read) #1=(bounded-queue-mask queue)))
+                  (cell (svref (bounded-queue-buffer queue) read))
+                  (diff (- (cell-sequence cell) next-read)))
              (cond ((= diff 0)
-                    (setf (bounded-queue-read queue) next-read)
-                    (setf (cell-sequence cell)
-                          (m+ next-read (bounded-queue-mask queue)))
+                    (setf (bounded-queue-read queue) next-read
+                          (cell-sequence cell) (logand (+ next-read #1#) #1#))
                     (return (cell-value cell)))
                    ((< diff 0)
                     (error "Queue is empty."))))))
