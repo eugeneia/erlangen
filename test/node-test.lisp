@@ -32,25 +32,25 @@
 
            ;; Test REMOTE-SPAWN
            (setq id (remote-spawn (host-name) (node-name) '(test-agent)
-                                  "bar" :link 1))
+                                  "bar" :link 2))
            (assert (find-agent id) ()
                    "REMOTE-SPAWN failed.")
            (handler-case (remote-spawn
                           (host-name) (node-name) '(test-agent)
-                          "nil" :invalid 1)
+                          "nil" :invalid 2)
              (error (error)
                (declare (ignore error)))
              (:no-error ()
                (error "REMOTE-SPAWN succeeded with invalid mode.")))
            (handler-case (remote-spawn
                           (host-name) (node-name) '(42)
-                          "nil" nil 1)
+                          "nil" nil 2)
              (error (error)
                (declare (ignore error)))
              (:no-error ()
                (error "REMOTE-SPAWN succeeded with invalid call.")))
            (remote-spawn (host-name) (node-name) '(not-bound)
-                         "nil" nil 1)
+                         "nil" nil 2)
 
            ;; Test REMOTE-SEND
            (remote-send "hello" id)
@@ -58,7 +58,7 @@
            (assert (equal '("hello") (test-messages)) ()
                    "REMOTE-SEND failed.")
            (let ((id (remote-spawn (host-name) (node-name) '(sleep 2)
-                                   "nil" nil 1)))
+                                   "nil" nil 2)))
              (remote-send "hello" id)
              (remote-send "hello2" id))
            (remote-send "hello" (agent-id :invalid))
