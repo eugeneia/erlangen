@@ -126,7 +126,7 @@
       (error 'exit :reason reason)
       ;; We are killing another agent: enqueue EXIT message, then close
       ;; agent's mailbox.
-      (progn (enqueue-message `(exit . ,reason) (agent-mailbox agent) t)
+      (progn (enqueue-priority `(exit . ,reason) (agent-mailbox agent))
              (close-mailbox (agent-mailbox agent))))
   (values))
 
@@ -191,7 +191,7 @@
 (defun notify (exited reason agent)
   "Node-local NOTIFY. See ERLANGEN:NOTIFY for generic implementation."
   (when (remove-link agent exited)
-    (enqueue-message `(,exited . ,reason) (agent-mailbox agent) t))
+    (enqueue-priority `(,exited . ,reason) (agent-mailbox agent)))
   (values))
 
 (defun agent-notify-exit (reason)

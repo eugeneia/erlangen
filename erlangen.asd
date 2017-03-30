@@ -9,13 +9,13 @@
                (:file "packages")
                (:file "conditions"
                       :depends-on ("packages"))
-               (:file "queue"
+               (:file "queues"
                       :depends-on ("ccl"
                                    "packages"))
                (:file "mailbox"
                       :depends-on ("ccl"
                                    "packages"
-                                   "queue"))
+                                   "queues"))
                (:file "agent"
                       :depends-on ("packages"
                                    "mailbox"

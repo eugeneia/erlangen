@@ -5,22 +5,26 @@
   (:use :cl)
   (:export :timeout))
 
-(defpackage erlangen.queue
-  (:documentation "Concurrent MPSC queue implementation.")
+(defpackage erlangen.queues
+  (:documentation "Concurrent MPSC FIFO queue implementations.")
   (:use :cl :ccl)
   (:export :make-queue
-           :enqueue
-           :dequeue))
+           :queue-push
+           :queue-pop
+           :make-bounded-queue
+           :bounded-queue-push
+           :bounded-queue-pop))
 
 (defpackage erlangen.mailbox
   (:documentation "Agent mailbox implementation.")
   (:use :cl
         :ccl
-        :erlangen.queue
+        :erlangen.queues
         :erlangen.conditions)
   (:export :mailbox
            :make-mailbox
            :enqueue-message
+           :enqueue-priority
            :dequeue-message
            :close-mailbox
            :mailbox-messages-dequeued
