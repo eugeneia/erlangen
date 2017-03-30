@@ -3,7 +3,7 @@
 
 (in-package :erlangen.queues)
 
-;;; Non-intrusive Vyukov queue:
+;;; Intrusive Vyukov queue:
 
 (defstruct (queue (:constructor make-queue%))
   head tail)
