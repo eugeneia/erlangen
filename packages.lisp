@@ -5,17 +5,22 @@
   (:use :cl)
   (:export :timeout))
 
+(defpackage erlangen.queue
+  (:documentation "Concurrent MPSC queue implementation.")
+  (:use :cl :ccl)
+  (:export :make-queue
+           :enqueue
+           :dequeue))
+
 (defpackage erlangen.mailbox
   (:documentation "Agent mailbox implementation.")
   (:use :cl
         :ccl
-        :jpl-queues
+        :erlangen.queue
         :erlangen.conditions)
   (:export :mailbox
            :make-mailbox
            :enqueue-message
-           :enqueue-priority
-           :empty-p
            :dequeue-message
            :close-mailbox
            :mailbox-messages-dequeued
@@ -202,7 +207,6 @@ introspection, and retrieval of statistics for agents and remote connections.")
   (:use :cl
         :ccl
         :erlangen.agent
-        :erlangen.mailbox
         :erlangen.distribution.protocol.node)
   (:export :agent-stats
            :agent-tree

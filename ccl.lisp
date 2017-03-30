@@ -11,6 +11,33 @@ otherwise."
 
 (export 'try-semaphore)
 
+;; Compare and swap, adapted from ChanL’s trivial-cas
+(defmacro cas (place old new)
+  "Atomic compare and swap. Atomically replace OLD with NEW in PLACE."
+  (cond ((and (listp place) (eq (first place) 'car))
+         `(%rplaca-conditional ,(second place) ,old ,new))
+        ((and (listp place) (eq (first place) 'cdr))
+         `(%rplacd-conditional ,(second place) ,old ,new))
+        (t `(conditional-store ,place ,old ,new))))
+
+(export 'cas)
+
+(defmacro xchg (place new)
+  "Atomic exchange. Atomically set PLACE to NEW value and return previous
+value of PLACE."
+  `(loop for old = ,place until (cas ,place old ,new)
+      finally (return old)))
+
+(export 'xchg)
+
+(defmacro deltaf (place delta-function)
+  `(loop for old = ,place
+         for new = (funcall ,delta-function old)
+      until (cas ,place old new)
+      finally (return new)))
+
+(export 'deltaf)
+
 (defmethod print-object ((o socket-error) stream)
   (print-unreadable-object (o stream :type t :identity t)
     (format stream "~a: ~a"

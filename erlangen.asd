@@ -9,9 +9,13 @@
                (:file "packages")
                (:file "conditions"
                       :depends-on ("packages"))
-               (:file "mailbox"
+               (:file "queue"
                       :depends-on ("ccl"
                                    "packages"))
+               (:file "mailbox"
+                      :depends-on ("ccl"
+                                   "packages"
+                                   "queue"))
                (:file "agent"
                       :depends-on ("packages"
                                    "mailbox"
@@ -77,7 +81,6 @@
                (:file "example/parallel-map"
                       :depends-on ("erlangen")))
   :depends-on ("trivia"
-               "jpl-queues"
                "trivial-utf-8"
                "fast-io"
                "cl-conspack"
