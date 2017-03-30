@@ -51,5 +51,6 @@ process (the “owner”) may call DEQUEUE-MESSAGE on a given `mailbox'."
     (deltaf (mailbox-messages-dequeued mailbox) '1+)
     (let ((priority-node (queue-pop priority)))
       (if priority-node
-          (car priority-node)
+          (prog1 #1=(car priority-node)
+            (setf #1# nil))
           (bounded-queue-pop messages)))))
