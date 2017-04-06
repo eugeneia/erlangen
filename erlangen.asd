@@ -11,11 +11,11 @@
                       :depends-on ("packages"))
                (:file "mailbox"
                       :depends-on ("ccl"
-                                   "packages"))
+                                   "packages"
+                                   "conditions"))
                (:file "agent"
                       :depends-on ("packages"
-                                   "mailbox"
-                                   "conditions"))
+                                   "mailbox"))
                (:file "registry"
                       :depends-on ("packages"
                                    "agent"))
@@ -34,19 +34,23 @@
                                    "distribution/protocol/buffers"))
                (:file "distribution/protocol/port-mapper"
                       :depends-on ("packages"
+                                   "agent"
                                    "macros"
                                    "distribution/protocol/buffers"
                                    "distribution/protocol/common"))
                (:file "distribution/id"
                       :depends-on ("packages"
-                                   "agent"))
+                                   "agent"
+                                   "registry"))
                (:file "distribution/protocol/node"
                       :depends-on ("packages"
                                    "agent"
                                    "macros"
                                    "distribution/call"
+                                   "distribution/id"
                                    "distribution/protocol/buffers"
-                                   "distribution/protocol/common"))
+                                   "distribution/protocol/common"
+                                   "distribution/protocol/port-mapper"))
                (:file "erlangen"
                       :depends-on ("packages"
                                    "agent"
@@ -54,12 +58,17 @@
                                    "conditions"
                                    "algorithms"
                                    "macros"
-                                   "distribution/call"))
+                                   "distribution/call"
+                                   "distribution/id"
+                                   "distribution/protocol/node"
+                                   "distribution/protocol/port-mapper"))
                ;; Management
                (:file "management"
                       :depends-on ("packages"
                                    "mailbox"
-                                   "agent"))
+                                   "agent"
+                                   "registry"
+                                   "distribution/protocol/node"))
                ;; Tests
                (:file "test/agent-test"
                       :depends-on ("agent"))
