@@ -2,7 +2,7 @@
   (:use :cl :ccl :erlangen :erlangen-platform.log)
   (:shadow :node)
   (:export :*key-size* :*replication* :*timeout* :*response-backlog*
-           :node :client :gen-id :route :route-agent
+           :node :client :gen-id
            :make-get-request :make-put-request :make-delete-request
            :get-reply-value :reply-sequence))
 
@@ -251,9 +251,9 @@
               (find-if 'route-stale-p (bucket-routes bucket)))
       (discover (random-bucket-id bucket) announce-p))))
 
-(defun initialize-node (routes &optional announce-p)
-  (dolist (route routes)
-    (add-route *node* route))
+(defun initialize-node (initial-routes &optional announce-p)
+  (loop for (id agent) in initial-routes do
+       (add-route *node* (route id agent)))
   (discover (node-id *node*) announce-p))
 
 (defun deadline (timeout)
@@ -270,11 +270,11 @@
   (handler-case (receive :timeout (seconds-until-deadline deadline))
     (timeout (timeout) (declare (ignore timeout)))))
 
-(defun node (&key (id (gen-id)) routes (values (make-hash-table)))
+(defun node (&key (id (gen-id)) initial-routes (values (make-hash-table)))
   (let ((*node* (make-node :id id :values values))
         (*random-state* (make-random-state t))
         (refresh-deadline #1=(deadline *timeout*)))
-    (initialize-node routes :announce)
+    (initialize-node initial-routes :announce)
     (loop for message = (receive-until refresh-deadline) do
          (unless (null message)
            (handle message))
@@ -289,11 +289,11 @@
                          (respond reply request)))
            (routes nil (slot-value request 'key))))
 
-(defun client (&key routes)
+(defun client (&key initial-routes)
   (let ((*node* (make-node :id (gen-id)))
         (*random-state* (make-random-state t))
         (refresh-deadline #1=(deadline *timeout*)))
-    (initialize-node routes)
+    (initialize-node initial-routes)
     (loop for message = (receive-until refresh-deadline) do
          (typecase message
            (request (proxy message))
