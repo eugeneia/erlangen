@@ -246,6 +246,8 @@
           (expt 2 (bucket-bound bucket))))
 
 (defun refresh-routes (&optional announce-p)
+  (when announce-p
+    (discover (node-id *node*) :announce))
   (dolist (bucket (node-buckets *node*))
     (when (or (plusp (bucket-free bucket))
               (find-if 'route-stale-p (bucket-routes bucket)))
