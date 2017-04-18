@@ -275,7 +275,7 @@
 (defun node (&key (id (gen-id)) initial-routes (values (make-hash-table)))
   (let ((*node* (make-node :id id :values values))
         (*random-state* (make-random-state t))
-        (refresh-deadline #1=(deadline *timeout*)))
+        (refresh-deadline #1=(deadline (/ *timeout* 2))))
     (initialize-node initial-routes :announce)
     (loop for message = (receive-until refresh-deadline) do
          (unless (null message)
