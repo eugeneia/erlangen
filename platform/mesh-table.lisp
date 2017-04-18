@@ -117,6 +117,12 @@
 
 (defstruct (reply (:include message)))
 
+(defmethod handle :before ((message message))
+  (with-slots (id agent) message
+    (when id
+      (or (update-route *node* id agent)
+          (add-route *node* (route id agent))))))
+
 (defun reply-bind (request &optional callback-function)
   (setf (message-sequence request)
         (ring-push (node-requests *node*) callback-function))
@@ -125,15 +131,7 @@
 (defun finalize-request (reply)
   (ring-delete (node-requests *node*) (message-sequence reply)))
 
-(defun replicate-request (request &key (id (node-id *node*)) (forward-p t))
-  (let ((replica (copy-structure request)))
-    (setf (message-id replica) id
-          (message-agent replica) (agent)
-          (message-sequence replica) nil
-          (request-forward-p replica) forward-p)
-    replica))
-
-(defun accept (reply)
+(defmethod handle ((reply reply))
   (let ((callback (when #1=(message-sequence reply)
                     (ring-get (node-requests *node*) #1#))))
     (when callback
@@ -151,10 +149,13 @@
     (write-log `(:respond ,request ,reply)))
   (send reply (message-agent request)))
 
-(defun intern-route (message)
-  (with-slots (id agent) message
-    (or (update-route *node* id agent)
-        (add-route *node* (route id agent)))))
+(defun replicate-request (request &key (id (node-id *node*)) (forward-p t))
+  (let ((replica (copy-structure request)))
+    (setf (message-id replica) id
+          (message-agent replica) (agent)
+          (message-sequence replica) nil
+          (request-forward-p replica) forward-p)
+    replica))
 
 (defstruct (discover-request (:include request)) key)
 (defstruct (discover-reply (:include reply)))
@@ -265,24 +266,18 @@
   (/ (max (- deadline (get-internal-real-time)) 0)
      internal-time-units-per-second))
 
-(defun receive-message (deadline)
+(defun receive-until (deadline)
   (handler-case (receive :timeout (seconds-until-deadline deadline))
-    (:no-error (message)
-      (when (message-id message)
-        (intern-route message))
-      message)
-    (timeout (timeout)
-      (declare (ignore timeout)))))
+    (timeout (timeout) (declare (ignore timeout)))))
 
 (defun node (&key (id (gen-id)) routes (values (make-hash-table)))
   (let ((*node* (make-node :id id :values values))
         (*random-state* (make-random-state t))
         (refresh-deadline #1=(deadline *timeout*)))
     (initialize-node routes :announce)
-    (loop for message = (receive-message refresh-deadline) do
-         (typecase message
-           (request (handle message))
-           (reply   (accept message)))
+    (loop for message = (receive-until refresh-deadline) do
+         (unless (null message)
+           (handle message))
          (when (deadline-exceeded-p refresh-deadline)
            (refresh-routes :announce)
            (setf refresh-deadline #1#)))))
@@ -299,10 +294,10 @@
         (*random-state* (make-random-state t))
         (refresh-deadline #1=(deadline *timeout*)))
     (initialize-node routes)
-    (loop for message = (receive-message refresh-deadline) do
+    (loop for message = (receive-until refresh-deadline) do
          (typecase message
            (request (proxy message))
-           (reply   (accept message)))
+           (reply   (handle message)))
          (when (deadline-exceeded-p refresh-deadline)
            (refresh-routes)
            (setf refresh-deadline #1#)))))
