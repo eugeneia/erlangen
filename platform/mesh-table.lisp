@@ -206,7 +206,7 @@
 
 (defmethod handle ((request get-request))
   (with-slots (id key forward-p) request
-    (unless (forward request (routes id key))
+    (unless (and forward-p (forward request (routes id key)))
       (multiple-value-bind (value exists-p)
           (values-get #1=(node-values *node*) key)
         (cond (exists-p
