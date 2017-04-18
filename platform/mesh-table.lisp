@@ -181,7 +181,7 @@
 (defun routes (from to &optional (max-routes 1))
   (let ((own-distance (distance (node-id *node*) to)))
     (last (delete-if (lambda (route)
-                       (or (= (route-id route) from)
+                       (or (eql (route-id route) from)
                            (route-stale-p route)
                            (<= own-distance (distance (route-id route) to))))
                      (find-routes to *node*))
