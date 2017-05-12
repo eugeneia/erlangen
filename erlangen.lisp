@@ -59,7 +59,7 @@ for ERLANGEN.AGENT."
 
    _function_—a _function designator_ or a _call_.
 
-   _attach_—either {:link}, {:attach}, or {nil}. The default is {nil}.
+   _attach_—either {:link}, {:monitor}, or {nil}. The default is {nil}.
 
    _mailbox-size_—a positive _unsigned integer_. The default is
    {*default-mailbox-size*}.
