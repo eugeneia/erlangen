@@ -253,8 +253,8 @@
               (find-if 'route-stale-p (bucket-routes bucket)))
       (discover (random-bucket-id bucket) announce-p))))
 
-(defun initialize-node (initial-routes &optional announce-p)
-  (loop for (id agent) in initial-routes do
+(defun initialize-node (initial-peers &optional announce-p)
+  (loop for (id agent) in initial-peers do
        (add-route *node* (route id agent)))
   (discover (node-id *node*) announce-p))
 
@@ -269,20 +269,21 @@
      internal-time-units-per-second))
 
 (defun receive-until (deadline)
-  (handler-case (receive :timeout (seconds-until-deadline deadline))
-    (timeout (timeout) (declare (ignore timeout)))))
+  (if (deadline-exceeded-p deadline)
+      (error 'timeout)
+      (receive :timeout (seconds-until-deadline deadline))))
 
-(defun node (&key (id (gen-id)) initial-routes (values (make-hash-table)))
-  (let ((*node* (make-node :id id :values values))
-        (*random-state* (make-random-state t))
-        (refresh-deadline #1=(deadline (/ *timeout* 2))))
-    (initialize-node initial-routes :announce)
-    (loop for message = (receive-until refresh-deadline) do
-         (unless (null message)
-           (handle message))
-         (when (deadline-exceeded-p refresh-deadline)
-           (refresh-routes :announce)
-           (setf refresh-deadline #1#)))))
+(defun node (&key id initial-peers values)
+  (let* ((*random-state* (make-random-state t))
+         (*node* (make-node :id (or id (gen-id))
+                            :values (or values (make-hash-table))))
+         (refresh-deadline #1=(deadline (/ *timeout* 2))))
+    (initialize-node initial-peers :announce)
+    (loop do (handler-case (handle (receive-until refresh-deadline))
+               (timeout (refresh-deadline-exceeded)
+                 (declare (ignore refresh-deadline-exceeded))
+                 (setf refresh-deadline #1#)
+                 (refresh-routes))))))
 
 (defun proxy (request)
   (forward (reply-bind (replicate-request request :id nil)
@@ -291,15 +292,16 @@
                          (respond reply request)))
            (routes nil (slot-value request 'key))))
 
-(defun client (&key initial-routes)
-  (let ((*node* (make-node :id (gen-id)))
-        (*random-state* (make-random-state t))
-        (refresh-deadline #1=(deadline *timeout*)))
-    (initialize-node initial-routes)
-    (loop for message = (receive-until refresh-deadline) do
-         (typecase message
-           (request (proxy message))
-           (reply   (handle message)))
-         (when (deadline-exceeded-p refresh-deadline)
-           (refresh-routes)
-           (setf refresh-deadline #1#)))))
+(defun client (&key initial-peers)
+  (let* ((*random-state* (make-random-state t))
+         (*node* (make-node :id (gen-id)))
+         (refresh-deadline #1=(deadline *timeout*)))
+    (initialize-node initial-peers)
+    (loop do (handler-case (let ((message (receive-until refresh-deadline)))
+                             (etypecase message
+                               (request (proxy message))
+                               (reply   (handle message))))
+               (timeout (refresh-deadline-exceeded)
+                 (declare (ignore refresh-deadline-exceeded))
+                 (setf refresh-deadline #1#)
+                 (refresh-routes))))))
