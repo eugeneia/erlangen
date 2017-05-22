@@ -238,20 +238,16 @@
         (forward (replicate-request request :forward-p nil)
                  (neighbors key))))))
 
-(defun gen-id (&optional (start 0) (end (expt 2 *key-size*)))
-  (+ start (random (- end start))))
-
-(defun random-bucket-id (bucket)
-  (gen-id (expt 2 (1- (bucket-bound bucket)))
-          (expt 2 (bucket-bound bucket))))
-
 (defun refresh-routes (&optional announce-p)
-  (when announce-p
-    (discover (node-id *node*) :announce))
-  (dolist (bucket (node-buckets *node*))
-    (when (or (plusp (bucket-free bucket))
-              (find-if 'route-stale-p (bucket-routes bucket)))
-      (discover (random-bucket-id bucket) announce-p))))
+  (loop for bucket in (node-buckets *node*)
+        for start = 1 then end
+        for end = (expt 2 (bucket-bound bucket))
+     do (when (or (plusp (bucket-free bucket))
+                  (find-if 'route-stale-p (bucket-routes bucket)))
+          ;; (logxor x y) = d → (logxor x d) = y
+          (discover (distance (+ start (random (- end start)))
+                              (node-id *node*))
+                    announce-p))))
 
 (defun initialize-node (initial-peers &optional announce-p)
   (loop for (id agent) in initial-peers do
@@ -272,6 +268,9 @@
   (if (deadline-exceeded-p deadline)
       (error 'timeout)
       (receive :timeout (seconds-until-deadline deadline))))
+
+(defun gen-id ()
+  (random (expt 2 *key-size*)))
 
 (defun node (&key id initial-peers values)
   (let* ((*random-state* (make-random-state t))
