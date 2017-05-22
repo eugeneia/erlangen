@@ -178,31 +178,31 @@
 (defmethod values-delete ((values hash-table) key)
   (remhash key values))
 
-(defun routes (from to &optional (max-routes 1))
+(defun routes (from to &key (limit 1))
   (let ((own-distance (distance (node-id *node*) to)))
     (last (delete-if (lambda (route)
                        (or (eql (route-id route) from)
                            (route-stale-p route)
                            (<= own-distance (distance (route-id route) to))))
                      (find-routes to *node*))
-          max-routes)))
+          limit)))
 
-(defun neighbors (key &optional include-stale-p)
+(defun neighbors (key &key include-stale-p (limit *replication*))
   (last (if include-stale-p
             #1=(find-routes key *node*)
             (delete-if 'route-stale-p #1#))
-        *replication*))
+        limit))
 
 (defun discover (key &optional announce-p)
   (forward (if announce-p
                (make-discover-request :key key)
                (make-discover-request :key key :id nil))
-           (neighbors key :include-stale)))
+           (neighbors key :include-stale-p t)))
 
 (defmethod handle ((request discover-request))
   (with-slots (id key) request
     (respond (make-discover-reply) request)
-    (forward request (routes id key *replication*))))
+    (forward request (routes id key :limit *replication*))))
 
 (defmethod handle ((request get-request))
   (with-slots (id key forward-p) request
@@ -290,7 +290,7 @@
                        (lambda (reply)
                          (finalize-request reply)
                          (respond reply request)))
-           (routes nil (slot-value request 'key))))
+           (neighbors (slot-value request 'key) :limit 1)))
 
 (defun client (&key initial-peers)
   (let* ((*random-state* (make-random-state t))
