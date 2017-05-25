@@ -7,8 +7,7 @@
 
 (defmethod handle ((request dump-routes-request))
   (respond (make-dump-routes-reply
-            :routes (reduce 'append (node-buckets *node*)
-                            :key 'bucket-routes))
+            :routes (reduce 'append (node-buckets *node*) :key 'bucket-routes))
            request))
 
 (defstruct (hsv (:constructor hsv (h s v)))
@@ -51,8 +50,14 @@
 (defun relative-distance (from to)
   (/ (distance from to) (1- (expt 2 *key-size*))))
 
-(defun graphviz (&rest dumped-routes)
-  (format t "strict digraph {
+(defun find-forward (route trace)
+  (find route trace :key 'fifth))
+
+(defun trace-color (message)
+  (values (id-color (slot-value (fourth message) 'key)) 1 1))
+
+(defun graphviz (dumped-routes &optional trace)
+  (format t "digraph {
     layout=fdp; splines=true; overlap=scalexy;
     node [ width=0.4, height=0.4, style=filled, color=lightgrey, label=\"\" ];
     edge [ arrowsize=0.5 ];~%")
@@ -61,9 +66,23 @@
          (format t "~D [color=~S];~%" id (web-color (id-color id)))
          (loop for route in routes do
               (let ((distance (relative-distance id (route-id route))))
-                (format t "~D -> ~D [color=~S, len=~F]~%"
+                (format t "~D -> ~D [color=~S, len=~F, style=~A]~%"
                         id
                         (route-id route)
                         (web-color (distance-color distance))
-                        (distance-length distance))))))
+                        (distance-length distance)
+                        (if (route-stale-p route)
+                            "dotted"
+                            "solid"))))))
+  (loop for reply in dumped-routes do
+       (with-slots (id routes) reply
+         (loop for route in routes
+               for message = (find-forward route trace)
+            when message do
+              (format t "~D -> ~D [color=~S, len=~F, penwidth=3, style=dashed]~%"
+                      id
+                      (route-id route)
+                      (web-color (trace-color message))
+                      (distance-length
+                       (relative-distance id (route-id route)))))))
   (format t "}~%"))
