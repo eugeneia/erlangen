@@ -5,6 +5,7 @@
   :author      "Max Rottenkolber <max@mr.gy>"
   :license     "AGPL-3.0"
   :components ((:file "logger")
+               (:file "log-vector" :depends-on ("logger"))
                (:file "server")
                (:file "supervisor" :depends-on ("logger"))
                (:file "timer" :depends-on ("logger"))
