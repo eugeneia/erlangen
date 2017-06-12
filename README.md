@@ -24,6 +24,14 @@ You can now start Clozure Common Lisp and load Erlangen:
 (use-package :erlangen)
 ```
 
+Alternatively, you can build Erlangen as a stand-alone executable that boots
+into a REPL that uses the packages `erlangen` and `erlangen.management`:
+
+```
+cd ~/quicklisp/local-projects/erlangen
+make bin/erlangen-kernel && bin/erlangen-kernel
+```
+
 ### Programming a Parallelized Map with Asynchronous Agents and Message Passing
 
 Let’s jump straight into a practical example. The Erlangen repository contains
