@@ -5,20 +5,19 @@ all: bin/erlangen-port-mapper bin/erlangen-kernel \
 	bin/erlangen-message-benchmark
 bin:
 	mkdir -p bin
-bin/erlangen-port-mapper: build/port-mapper.lisp $(SOURCE_OBJECTS) | bin
+bin/erlangen-port-mapper: $(SOURCE_OBJECTS) | bin
 	ccl -Q -b -n \
 		-l build/load-quicklisp.lisp \
 		-l build/port-mapper.lisp
-bin/erlangen-kernel: build/kernel.lisp $(SOURCE_OBJECTS) | bin
+bin/erlangen-kernel: $(SOURCE_OBJECTS) | bin
 	ccl -Q -b -n \
 		-l build/load-quicklisp.lisp \
 		-l build/kernel.lisp
-bin/erlangen-message-benchmark: build/message-benchmark.lisp \
-				$(SOURCE_OBJECTS) | bin
+bin/erlangen-message-benchmark: $(SOURCE_OBJECTS) | bin
 	ccl -Q -b -n \
 		-l build/load-quicklisp.lisp \
 		-l build/message-benchmark.lisp
-bin/erlangen-ring-benchmark: build/ring-benchmark.lisp $(SOURCE_OBJECTS) | bin
+bin/erlangen-ring-benchmark: $(SOURCE_OBJECTS) | bin
 	ccl -Q -b -n \
 		-l build/load-quicklisp.lisp \
 		-l build/ring-benchmark.lisp
