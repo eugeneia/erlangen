@@ -77,7 +77,14 @@
   "*Description:*
 
    {*default-mailbox-size*} is the default value of the {:mailbox-size}
-   parameter to {spawn}.")
+   parameter to {spawn}.
+
+   When an _agent_ is started it _binds_ this variable to its value in the
+   environment where it was spawned, effectively inheriting the _binding_.
+
+   *Affected By:*
+
+   {spawn}")
 
 (defvar *agent-debug* nil
   "*Description:*
@@ -87,7 +94,14 @@
    spawned _agent_. The debugger will be entered so that the call stack
    can be inspected. Invoking the {exit} _restart_ will resume normal
    operation except that the exit reason will be the _agent_ instead of
-   the fatal _condition_.")
+   the fatal _condition_.
+
+   When an _agent_ is started it _binds_ this variable to its value in the
+   environment where it was spawned, effectively inheriting the _binding_.
+
+   *Affected By:*
+
+   {spawn}")
 
 (defvar *agent* (make-agent% :mailbox (make-mailbox *default-mailbox-size*))
   "Bound to current agent.")
