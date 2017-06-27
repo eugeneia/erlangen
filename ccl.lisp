@@ -11,14 +11,42 @@ otherwise."
 
 (export 'try-semaphore)
 
-;; Compare and swap, adapted from ChanL’s trivial-cas
-(defmacro cas (place old new)
-  "Atomic compare and swap. Atomically replace OLD with NEW in PLACE."
-  (cond ((and (listp place) (eq (first place) 'car))
-         `(%rplaca-conditional ,(second place) ,old ,new))
-        ((and (listp place) (eq (first place) 'cdr))
-         `(%rplacd-conditional ,(second place) ,old ,new))
-        (t `(conditional-store ,place ,old ,new))))
+;; Compare and swap
+(defmacro conditional-store (place old-value new-value &environment env)
+  (setq place (macroexpand place env))
+  (if (atom place)
+    ;; CLX uses special variables' value cells as place forms.
+    (if (and (symbolp place)
+             (eq :special (ccl::variable-information place env)))
+      (let* ((base (gensym))
+             (offset (gensym)))
+        `(multiple-value-bind (,base ,offset)
+          (ccl::%symbol-binding-address ',place)
+          (ccl::%store-node-conditional ,offset ,base ,old-value ,new-value)))
+      (signal-program-error "~s is not a special variable ." place))
+    (let* ((sym (car place))
+           (struct-transform (structref-info sym env)))
+      (if struct-transform
+        (setq place (defstruct-ref-transform struct-transform (cdr place) env)
+              sym (car place)))
+      (if (eq (car place) 'the)
+        (setq place (caddr place)
+              sym (car place)))
+      (case sym
+        ((svref ccl::%svref ccl::struct-ref)
+         (let* ((v (gensym)))
+           `(let* ((,v ,(cadr place)))
+              (ccl::store-gvector-conditional
+               ,(caddr place) ,v ,old-value ,new-value))))
+        (car
+         `(%rplaca-conditional ,(cadr place) ,old-value ,new-value))
+        (cdr
+         `(%rplacd-conditional ,(cadr place) ,old-value ,new-value))
+        (otherwise
+         (signal-program-error "Don't know how to do conditional store to ~s" place))))))
+
+(defmacro cas (place old new) ; alias CONDITIONAL-STORE to shorthand CAS
+  `(conditional-store ,place ,old ,new))
 
 (export 'cas)
 
