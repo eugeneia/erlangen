@@ -6,7 +6,8 @@
 ;;; Intrusive Vyukov queue:
 
 (defstruct (queue (:constructor make-queue%))
-  head tail)
+  (head (error "Need HEAD") :type cons)
+  (tail (error "Need TAIL") :type cons))
 
 (defun make-queue (&aux (stub (list nil)))
   (make-queue% :head stub :tail stub))
@@ -22,11 +23,15 @@
 
 ;;; Intrusive bounded queue, fails on overflow:
 
-(defstruct (bounded-queue (:constructor make-bounded-queue%))
-  buffer mask (read 0) (write 0))
-
 (defstruct cell
-  sequence value)
+  (sequence (error "Need SEQUENCE") :type fixnum)
+  value)
+
+(defstruct (bounded-queue (:constructor make-bounded-queue%))
+  (buffer (error "Need BUFFER") :type (simple-array cell (*)))
+  (mask (error "Need MASK") :type fixnum)
+  (read 0 :type fixnum)
+  (write 0 :type fixnum))
 
 (defun make-bounded-queue (size)
   (check-type size (and (integer 2) fixnum))
