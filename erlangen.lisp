@@ -26,7 +26,7 @@
 (defun exit (&optional (reason :kill) (agent (agent)))
   "*Arguments and Values:*
 
-   _reason_—an _object_.
+   _reason_—an _object_. The default is {:kill}.
 
    _agent_—an _agent_. The default is the _calling agent_.
 
@@ -120,14 +120,14 @@ for ERLANGEN.AGENT."
    {link} _links_ the _calling agent_ to _agent_. After two _agents_ are
    _linked_ they behave as follows:
 
-   When the _calling agent_ exits it will attempt to kill _agent_ with
-   the _exit reason_ of the _calling agent_.
+   When the _calling agent_ exits, an _exit message_ with the _exit reason_ of
+   the _calling agent_ is delivered to the _linked agent_.
 
-   When _agent_ exits, and _mode_ is {:link} it will attempt to kill the
-   _calling agent_ with the _exit reason_ of _agent_.
+   When the linked _agent_ exits, and _mode_ is {:link}, an _exit message_ with
+   the _exit reason_ of the _linked agent_ is delivered to the _calling agent_.
 
-   When _agent_ exits, and _mode_ is {:monitor} it will attempt to send an
-   _exit notification_ to the _calling agent_.
+   When the _linked agent_ exits, and _mode_ is {:monitor}, an _exit
+   notification_ is delivered to the _calling agent_.
 
    An _exit notification_ is of the form
 
